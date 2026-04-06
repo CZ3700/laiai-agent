@@ -503,7 +503,7 @@ function showGitRequiredNotice() {
     '<div class="git-notice-header">' + t('git.required_title') + '</div>' +
     '<div class="git-notice-body">' + t('git.required_body') + '</div>' +
     '<div class="git-notice-actions">' +
-    '<button class="btn btn-p btn-sm" onclick="electronAPI.openFile(\'https://git-scm.com/downloads/win\');this.closest(\'.git-notice\').remove()">' + t('git.download') + '</button>' +
+    '<button class="btn btn-p btn-sm" onclick="window.open(\'https://git-scm.com/downloads/win\');this.closest(\'.git-notice\').remove()">' + t('git.download') + '</button>' +
     '<button class="btn btn-s btn-sm" onclick="this.closest(\'.git-notice\').remove()">' + t('git.later') + '</button>' +
     '</div></div>';
   document.body.appendChild(notice);

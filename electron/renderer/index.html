@@ -695,8 +695,8 @@
       <div class="about-ver" id="about-ver">v0.0.1</div>
       <div class="about-desc" data-i18n="about.desc">An intelligent programming assistant that understands your codebase, edits files, runs terminal commands, and handles complete workflows for you.</div>
       <div style="display:flex;gap:10px">
-        <button class="btn btn-s" onclick="electronAPI.openFile('https://www.laiai.ai')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="about.web">Website</span></button>
-        <button class="btn btn-s" onclick="electronAPI.openFile('https://docs.laiai.ai/')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span data-i18n="about.support">Support</span></button>
+        <button class="btn btn-s" onclick="window.open('https://www.laiai.ai')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="about.web">Website</span></button>
+        <button class="btn btn-s" onclick="window.open('https://docs.laiai.ai/')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span data-i18n="about.support">Support</span></button>
       </div>
       <div style="margin-top:40px;color:var(--t4);font-size:11px" data-i18n="about.copyright">© 2026 莱艾科技</div>
     </div>
@@ -1101,8 +1101,8 @@
         <p id="sd-about-ver" class="sd-about-ver">v0.0.1</p>
         <p class="sd-about-desc" data-i18n="about.desc">智能 AI 助手 · 全模型聚合</p>
         <div class="sd-about-links">
-          <button class="btn btn-s btn-sm" onclick="electronAPI.openFile('https://www.laiai.ai')"><span data-i18n="about.web">Website</span></button>
-          <button class="btn btn-s btn-sm" onclick="electronAPI.openFile('https://docs.laiai.ai/')"><span data-i18n="about.support">Docs</span></button>
+          <button class="btn btn-s btn-sm" onclick="window.open('https://www.laiai.ai')"><span data-i18n="about.web">Website</span></button>
+          <button class="btn btn-s btn-sm" onclick="window.open('https://docs.laiai.ai/')"><span data-i18n="about.support">Docs</span></button>
           <button class="btn btn-s btn-sm" onclick="checkForUpdateManual()" id="btn-check-update" data-i18n="update.check">Check for Updates</button>
         </div>
         <span id="update-status" class="update-status"></span>
