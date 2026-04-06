@@ -338,7 +338,7 @@ export function showAddPlugin() {
   _editingPlugin = null;
   document.getElementById('plugin-editor').classList.remove('hidden');
   const overlay = document.getElementById('plugin-editor-overlay');
-  if (overlay) overlay.classList.remove('hidden');
+  if (overlay) overlay.classList.add('show');
   document.getElementById('plugin-editor-title').textContent = t('plugins.create_title');
   document.getElementById('pe-name').value = '';
   document.getElementById('pe-type').value = 'command';
@@ -368,7 +368,7 @@ export function editPlugin(idx) {
 
 export function closePluginEditor() {
   document.getElementById('plugin-editor')?.classList.add('hidden');
-  document.getElementById('plugin-editor-overlay')?.classList.add('hidden');
+  document.getElementById('plugin-editor-overlay')?.classList.remove('show');
 }
 
 export function onPluginTypeChange() {
