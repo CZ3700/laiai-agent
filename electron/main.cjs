@@ -75,7 +75,7 @@ function saveProvidersToDisk(data) { saveJSON(getProvidersPath(), data); }
 
 // ─── Resolve paths ────────────────────────────────────────────────────────
 function getCliPath() {
-  if (app.isPackaged) return path.join(process.resourcesPath, 'dist', 'cli.js');
+  if (app.isPackaged) return path.join(process.resourcesPath, 'dist', 'cli-bundle.mjs');
   return path.join(PROJECT_ROOT, 'dist', 'cli.js');
 }
 function getModelsConfigPath() {

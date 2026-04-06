@@ -131,7 +131,6 @@ function register(ctx) {
 
     // CLI arguments
     const args = [
-      '--experimental-detect-module', // Auto-detect ESM format for cli.js
       cliPath,
       '-p',                           // Non-interactive (print) mode
       '--output-format', 'stream-json', // NDJSON output
