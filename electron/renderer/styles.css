@@ -907,6 +907,13 @@ input,select,textarea{font-family:inherit}
 .update-bar .btn-p{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3)}
 .update-bar .btn-p:hover{background:rgba(255,255,255,0.3)}
 .update-bar .btn-xs{color:rgba(255,255,255,0.7);background:none;border:none}
+
+/* ═══ GIT NOTICE ═══ */
+.git-notice{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.git-notice-inner{background:var(--bg-1);border:1px solid var(--border-2);border-radius:var(--radius-lg);padding:28px;width:420px;max-width:90vw;box-shadow:var(--shadow-lg);animation:fadeIn .2s ease}
+.git-notice-header{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--t1)}
+.git-notice-body{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:20px}
+.git-notice-actions{display:flex;gap:10px}
 .sd-about-update{display:flex;align-items:center;gap:10px;margin-top:12px}
 .update-status{font-size:11px;color:var(--t3)}
 .btn-link{background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px}

@@ -456,6 +456,14 @@ async function init(){
     initImagePaste();
     initDragDrop();
 
+    // Check if Git is installed (required for Agent tools)
+    try {
+      const gitCheck = await electronAPI.runShell({ cmd: 'git --version' });
+      if (!gitCheck.ok) {
+        showGitRequiredNotice();
+      }
+    } catch { showGitRequiredNotice(); }
+
     // Show welcome guide if user has providers but hasn't seen guide yet
     if (state.providers.length && !cfg.guideSeen) {
       setTimeout(async () => {
@@ -485,6 +493,21 @@ async function init(){
 }
 
 init();
+
+// ═══ GIT REQUIRED NOTICE ═══
+function showGitRequiredNotice() {
+  const notice = document.createElement('div');
+  notice.className = 'git-notice';
+  notice.innerHTML =
+    '<div class="git-notice-inner">' +
+    '<div class="git-notice-header">' + t('git.required_title') + '</div>' +
+    '<div class="git-notice-body">' + t('git.required_body') + '</div>' +
+    '<div class="git-notice-actions">' +
+    '<button class="btn btn-p btn-sm" onclick="electronAPI.openFile(\'https://git-scm.com/downloads/win\');this.closest(\'.git-notice\').remove()">' + t('git.download') + '</button>' +
+    '<button class="btn btn-s btn-sm" onclick="this.closest(\'.git-notice\').remove()">' + t('git.later') + '</button>' +
+    '</div></div>';
+  document.body.appendChild(notice);
+}
 
 // ═══ AUTO UPDATE UI ═══
 window.checkForUpdateManual = async function() {
