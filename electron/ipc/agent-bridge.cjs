@@ -39,14 +39,12 @@ function register(ctx) {
 
     // Find a working Node.js binary
     let nodeBin;
+    let useElectronAsNode = false;
     if (!app.isPackaged) {
-      // Dev mode: use Electron's own binary
       nodeBin = process.execPath;
     } else {
-      // Packaged mode: try system node first, fallback to bundled electron with --no-sandbox
       const { execSync } = require('child_process');
       try {
-        // Check if system Node.js is available
         const systemNode = execSync('where node', { encoding: 'utf-8', timeout: 5000 }).split('\n')[0].trim();
         if (systemNode && require('fs').existsSync(systemNode)) {
           nodeBin = systemNode;
@@ -54,9 +52,8 @@ function register(ctx) {
           throw new Error('not found');
         }
       } catch {
-        // No system Node — use Electron as Node with ELECTRON_RUN_AS_NODE
         nodeBin = process.execPath;
-        env.ELECTRON_RUN_AS_NODE = '1';
+        useElectronAsNode = true;
       }
     }
 
@@ -71,6 +68,11 @@ function register(ctx) {
       DISABLE_AUTOUPDATER: '1',
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
+
+    // If using Electron as Node.js runtime, set the flag
+    if (useElectronAsNode) {
+      env.ELECTRON_RUN_AS_NODE = '1';
+    }
 
     // Set API credentials from provider
     if (opts.provider) {

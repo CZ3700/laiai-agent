@@ -1565,9 +1565,11 @@ function addErrorCard(errorType, errorMessage, session) {
 
 // ═══ SEND CHAT ═══
 export async function sendChat(){
+  try {
   const input=document.getElementById('tw-input');
   const msg=input.value.trim();
   if(!msg)return;
+  console.log('[sendChat] msg:', msg.substring(0, 50));
   input.value='';input.style.height='auto';
   updateStatusBar('ready');
 
@@ -1671,6 +1673,10 @@ export async function sendChat(){
 
   document.getElementById('tw-send-btn').disabled=false;
   debouncedSaveSessions();
+  } catch(e) {
+    console.error('[sendChat] Error:', e);
+    toast('Error: ' + e.message, 'error');
+  }
 }
 
 // go() is here because chat uses it, and it references switchMode
