@@ -37,7 +37,7 @@ import {
   onProxyModeChange, saveProxy, checkCurrentIpDrawer, testProxyDrawer,
   checkCurrentIp, testProxy, loadProxySettings,
   loadProxyList, addSavedProxy, selectProxy, setDirectProxy, setSystemProxy, deleteSavedProxy,
-  obDomainInput, obTest, obNext, obBack, obFinish,
+  obDomainInput, obTest, obNext, obBack, obFinish, obSkip,
   loadKeybindingsUI, rebindKey, loadSmtpSettings, saveSmtpSettings, testSmtpConnection, showWelcomeGuide,
   showAddWorkflow, editWorkflow, closeWorkflowEditor, onWorkflowTriggerChange,
   addWorkflowStep, removeWorkflowStep, onWorkflowStepTypeChange,
@@ -203,6 +203,7 @@ window.obTest = obTest;
 window.obNext = obNext;
 window.obBack = obBack;
 window.obFinish = obFinish;
+window.obSkip = obSkip;
 window.showAddWorkflow = showAddWorkflow;
 window.editWorkflow = editWorkflow;
 window.closeWorkflowEditor = closeWorkflowEditor;

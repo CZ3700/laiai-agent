@@ -909,6 +909,8 @@ input,select,textarea{font-family:inherit}
 .update-bar .btn-xs{color:rgba(255,255,255,0.7);background:none;border:none}
 .sd-about-update{display:flex;align-items:center;gap:10px;margin-top:12px}
 .update-status{font-size:11px;color:var(--t3)}
+.btn-link{background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px}
+.btn-link:hover{color:var(--t1)}
 
 /* ═══ PLUGIN SYSTEM ═══ */
 .plugin-tabs{display:flex;gap:4px;margin-bottom:12px}

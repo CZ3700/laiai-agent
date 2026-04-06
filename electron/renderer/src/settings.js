@@ -572,15 +572,28 @@ export async function obTest(){
 export function obNext(){document.getElementById('ob-p1').style.display='none';document.getElementById('ob-p2').style.display='';document.getElementById('ob-s2').className='ob-step done';document.getElementById('ob-s3').className='ob-step cur';document.getElementById('ob-model').innerHTML=state.obModels.map(m=>`<option value="${m.id}">${m.id}</option>`).join('')}
 export function obBack(){document.getElementById('ob-p1').style.display='';document.getElementById('ob-p2').style.display='none';document.getElementById('ob-s2').className='ob-step cur';document.getElementById('ob-s3').className='ob-step'}
 
-export async function obFinish(){
-  const url=document.getElementById('ob-url').value.trim(),key=document.getElementById('ob-key').value.trim(),model=document.getElementById('ob-model').value;
-  let name='My Provider';try{name=new URL(url).hostname.replace(/^api\./,'').replace(/\..+$/,'');name=name.charAt(0).toUpperCase()+name.slice(1)}catch{}
-  state.providers.push({id:gid(),name,baseUrl:url,apiKey:key,models:state.obModels,defaultModel:model,isDefault:true});
-  await persistProvs();renderProvs();collectModels();
-  const c=await electronAPI.loadConfig()||{};c.onboardingDone=true;await electronAPI.saveConfig(c);
+export async function obSkip(){
+  const c=await electronAPI.loadConfig()||{};
+  c.onboardingDone=true;
+  await electronAPI.saveConfig(c);
   document.getElementById('onboarding').classList.add('hidden');
-  // Show welcome guide after first setup
-  setTimeout(() => showWelcomeGuide(), 500);
+  toast(t('ob.skipped'));
+}
+
+export async function obFinish(){
+  try {
+    const url=document.getElementById('ob-url').value.trim(),key=document.getElementById('ob-key').value.trim(),model=document.getElementById('ob-model').value;
+    if(!url||!key){toast(t('prov.fill_required'));return}
+    let name='My Provider';try{name=new URL(url).hostname.replace(/^api\./,'').replace(/\..+$/,'');name=name.charAt(0).toUpperCase()+name.slice(1)}catch{}
+    state.providers.push({id:gid(),name,baseUrl:url,apiKey:key,models:state.obModels||[],defaultModel:model||'',isDefault:true});
+    await persistProvs();renderProvs();collectModels();
+    const c=await electronAPI.loadConfig()||{};c.onboardingDone=true;await electronAPI.saveConfig(c);
+    document.getElementById('onboarding').classList.add('hidden');
+    setTimeout(() => showWelcomeGuide(), 500);
+  } catch(e) {
+    toast('Setup error: ' + e.message, 'error');
+    console.error('[obFinish]', e);
+  }
 }
 
 export function showWelcomeGuide() {

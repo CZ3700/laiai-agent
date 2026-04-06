@@ -726,7 +726,7 @@
     <div class="modal-title" id="mp-title" data-i18n="prov.add">添加 API 提供商</div>
     <div class="f">
       <label data-i18n="prov.domain">站点域名</label>
-      <input id="mp-domain" placeholder="e.g. openrouter.ai or api.deepseek.com" data-i18n-placeholder="prov.domain_ph" spellcheck="false" oninput="onDomainInput()">
+      <input id="mp-domain" placeholder="e.g. laiai.ai" data-i18n-placeholder="prov.domain_ph" spellcheck="false" oninput="onDomainInput()">
       <div class="hint" data-i18n="prov.domain_hint">输入域名后自动补齐为完整 API 地址</div>
     </div>
     <div class="f" id="mp-url-row" style="display:none">
@@ -839,13 +839,16 @@
     <div class="ob-steps"><div class="ob-step done"></div><div class="ob-step cur" id="ob-s2"></div><div class="ob-step" id="ob-s3"></div></div>
     <div id="ob-p1">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px" data-i18n="ob.choose">输入 API 站点</div>
-      <div class="f"><label data-i18n="prov.domain">站点域名</label><input id="ob-domain" placeholder="e.g. openrouter.ai" data-i18n-placeholder="prov.domain_ph_ob" spellcheck="false" oninput="obDomainInput()"></div>
+      <div class="f"><label data-i18n="prov.domain">站点域名</label><input id="ob-domain" placeholder="e.g. laiai.ai" data-i18n-placeholder="prov.domain_ph_ob" spellcheck="false" oninput="obDomainInput()"></div>
       <div class="f"><label data-i18n="prov.url">API 地址 (自动补齐)</label><input id="ob-url" spellcheck="false"></div>
       <div class="f"><label data-i18n="prov.key">API Key</label><input type="password" id="ob-key" spellcheck="false"></div>
       <div id="ob-status" style="display:none;padding:8px 12px;border-radius:8px;font-size:11px;margin-top:8px"></div>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button class="btn btn-s" style="flex:1" onclick="obTest()"><span data-i18n="prov.test">Test</span></button>
         <button class="btn btn-p" style="flex:1" id="ob-next" disabled onclick="obNext()"><span data-i18n="btn.next">Next</span></button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn-link" onclick="obSkip()" data-i18n="ob.skip">Skip for now</button>
       </div>
     </div>
     <div id="ob-p2" style="display:none">

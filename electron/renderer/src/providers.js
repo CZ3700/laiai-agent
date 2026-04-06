@@ -5,6 +5,7 @@ import { toast, esc, gid, pColor, showSt } from './utils.js';
 import { updateChatModelSelect } from './chat.js';
 
 export const PRESETS={
+  laiai:{name:'LAIAI',url:'https://api.laiai.ai',c:'#7C3AED'},
   anthropic:{name:'Claude API',url:'https://api.anthropic.com',c:'#D97706'},
   openai:{name:'OpenAI',url:'https://api.openai.com',c:'#10B981'},
   deepseek:{name:'DeepSeek',url:'https://api.deepseek.com',c:'#3B82F6'},
@@ -42,7 +43,14 @@ export function updateDropdowns(){
 export function domainToUrl(domain){
   domain=domain.trim().replace(/^https?:\/\//,'').replace(/\/+$/,'');
   if(!domain)return '';
-  if(domain.includes('/')){return 'https://'+domain}
+  // Check if domain matches a known preset
+  for(const[,p]of Object.entries(PRESETS)){
+    if(p.url && domain && p.url.includes(domain)){return p.url}
+  }
+  // Auto-prepend api. if domain doesn't start with api.
+  if(!domain.startsWith('api.')&&!domain.includes('/')&&!domain.includes('localhost')){
+    return 'https://api.'+domain;
+  }
   return 'https://'+domain;
 }
 
