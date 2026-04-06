@@ -23,6 +23,8 @@ extraResources:
     to: dist/cli.js
   - from: dist/cli.js.map
     to: dist/cli.js.map
+  - from: dist/cli-win.exe
+    to: dist/cli-win.exe
   - from: config/models.json
     to: config/models.json
   - from: electron/assets

@@ -37,24 +37,21 @@ function register(ctx) {
       return { ok: false, error: 'Agent CLI not found: ' + cliPath };
     }
 
-    // Find a working Node.js binary
+    // Find Node.js binary or use standalone CLI exe
     let nodeBin;
-    let useElectronAsNode = false;
-    if (!app.isPackaged) {
-      nodeBin = process.execPath;
-    } else {
-      const { execSync } = require('child_process');
-      try {
-        const systemNode = execSync('where node', { encoding: 'utf-8', timeout: 5000 }).split('\n')[0].trim();
-        if (systemNode && require('fs').existsSync(systemNode)) {
-          nodeBin = systemNode;
-        } else {
-          throw new Error('not found');
-        }
-      } catch {
-        nodeBin = process.execPath;
-        useElectronAsNode = true;
+    let useStandaloneExe = false;
+    if (app.isPackaged) {
+      // Check if standalone cli exe exists (no Node.js dependency)
+      const cliExePath = path.join(process.resourcesPath, 'dist', process.platform === 'win32' ? 'cli-win.exe' : process.platform === 'darwin' ? 'cli-mac' : 'cli-linux');
+      if (fs.existsSync(cliExePath)) {
+        nodeBin = cliExePath;
+        useStandaloneExe = true;
+      } else {
+        // Fallback to system node
+        nodeBin = 'node';
       }
+    } else {
+      nodeBin = process.execPath;
     }
 
     // Build environment
@@ -69,12 +66,7 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // If using Electron as Node.js runtime, set the flags
-    if (useElectronAsNode) {
-      env.ELECTRON_RUN_AS_NODE = '1';
-      // cli.js uses ESM imports — tell Node.js to detect module type automatically
-      env.NODE_OPTIONS = (env.NODE_OPTIONS || '') + ' --experimental-detect-module';
-    }
+    // Standalone exe doesn't need extra flags
 
     // Set API credentials from provider
     if (opts.provider) {
@@ -140,15 +132,16 @@ function register(ctx) {
     }
 
     // CLI arguments
-    const args = [
-      cliPath,
+    // When using standalone exe, the exe IS the CLI — no separate cli.js needed
+    const args = useStandaloneExe ? [] : [cliPath];
+    args.push(
       '-p',                           // Non-interactive (print) mode
       '--output-format', 'stream-json', // NDJSON output
       '--input-format', 'stream-json',  // NDJSON input
       '--verbose',                      // Required for stream-json
       '--dangerously-skip-permissions', // GUI handles permissions
       '--replay-user-messages',         // Echo user messages back for acknowledgment
-    ];
+    );
 
     // Add MCP config if available
     if (mcpConfigPath) {
