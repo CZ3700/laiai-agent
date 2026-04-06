@@ -1666,9 +1666,31 @@ export async function sendChat(){
       addChatMsg('ai','⚠️ ' + t('chat.tts_failed') + ': '+friendlyError(r.error||'Unknown'),session.messages.length);
     }
   } else {
-    // ── Route through Agent engine (29+ tools) ──
-    await sendAgentChat(msg, session, isFirstMessage);
-    return;
+    // ── Try Agent engine first, fallback to direct API ──
+    const agentOk = await ensureAgentStarted();
+    if (agentOk) {
+      await sendAgentChat(msg, session, isFirstMessage);
+      return;
+    }
+    // Agent failed — use direct API (Electron net.request, respects proxy)
+    addTypingIndicator();
+    try {
+      const r = await electronAPI.chatStreamStart({
+        provider: provData,
+        messages: getChatHistory().concat([{ role: 'user', content: msg }]),
+      });
+      // Streaming is handled by listeners set up in init
+    } catch {
+      removeTypingIndicator();
+      // Final fallback: non-streaming
+      const r = await electronAPI.chatSend({ provider: provData, messages: getChatHistory().concat([{ role: 'user', content: msg }]) });
+      if (r.ok && r.content) {
+        addChatMsg('ai', r.content, session.messages.length);
+        session.messages.push({ role: 'assistant', content: r.content });
+      } else {
+        addChatMsg('ai', '⚠️ ' + friendlyError(r.error || 'Failed'), session.messages.length);
+      }
+    }
   }
 
   document.getElementById('tw-send-btn').disabled=false;

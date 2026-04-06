@@ -6,6 +6,7 @@ import { updateChatModelSelect } from './chat.js';
 
 export const PRESETS={
   laiai:{name:'LAIAI',url:'https://api.laiai.ai',c:'#7C3AED'},
+  openrouter:{name:'OpenRouter',url:'https://openrouter.ai/api',c:'#6366F1'},
   anthropic:{name:'Claude API',url:'https://api.anthropic.com',c:'#D97706'},
   openai:{name:'OpenAI',url:'https://api.openai.com',c:'#10B981'},
   deepseek:{name:'DeepSeek',url:'https://api.deepseek.com',c:'#3B82F6'},
@@ -45,8 +46,13 @@ export function domainToUrl(domain){
   if(!domain)return '';
   // Check if domain matches a known preset
   for(const[,p]of Object.entries(PRESETS)){
-    if(p.url && domain && p.url.includes(domain)){return p.url}
+    if(p.url && domain && p.url.replace(/^https?:\/\//,'').includes(domain)){return p.url}
   }
+  // Known special cases where API path is non-standard
+  const specialDomains = {
+    'openrouter.ai': 'https://openrouter.ai/api',
+  };
+  if(specialDomains[domain]) return specialDomains[domain];
   // Auto-prepend api. if domain doesn't start with api.
   if(!domain.startsWith('api.')&&!domain.includes('/')&&!domain.includes('localhost')){
     return 'https://api.'+domain;
