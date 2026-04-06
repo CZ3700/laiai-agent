@@ -19,12 +19,10 @@ files:
 
 # Extra resources copied outside asar (needed for node-pty to spawn cli.js)
 extraResources:
-  - from: dist/cli.js
-    to: dist/cli.js
+  - from: dist/cli-final.cjs
+    to: dist/cli-final.cjs
   - from: dist/node-runtime.exe
     to: dist/node-runtime.exe
-  - from: dist/node_modules
-    to: dist/node_modules
   - from: config/models.json
     to: config/models.json
   - from: electron/assets

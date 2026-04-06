@@ -64,10 +64,7 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // Point NODE_PATH to bundled node_modules alongside cli.js
-    if (app.isPackaged) {
-      env.NODE_PATH = path.join(process.resourcesPath, 'dist', 'node_modules');
-    }
+    // cli-final.cjs is fully self-contained — no external deps needed
 
     // Set API credentials from provider
     if (opts.provider) {
@@ -134,7 +131,6 @@ function register(ctx) {
 
     // CLI arguments
     const args = [
-      '--experimental-detect-module',
       cliPath,
       '-p',                           // Non-interactive (print) mode
       '--output-format', 'stream-json', // NDJSON output
