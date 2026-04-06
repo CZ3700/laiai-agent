@@ -360,9 +360,10 @@ function setupAutoUpdater() {
       return { ok: true };
     });
 
-    // Check for updates 30 seconds after startup, then every 4 hours
-    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 30000);
-    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
+    // Auto-check disabled — users check manually from Settings → About
+    // To enable: uncomment the lines below after setting up a public release source
+    // setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 30000);
+    // setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
 
     _log('[updater] Auto-updater initialized');
   } catch (e) {
