@@ -64,15 +64,9 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // Point NODE_PATH to the app's node_modules so cli.js can find dependencies
+    // Point NODE_PATH to bundled node_modules alongside cli.js
     if (app.isPackaged) {
-      const appPath = path.join(process.resourcesPath, 'app.asar');
-      const appUnpackedPath = path.join(process.resourcesPath, 'app.asar.unpacked');
-      env.NODE_PATH = [
-        path.join(appPath, 'node_modules'),
-        path.join(appUnpackedPath, 'node_modules'),
-        path.join(process.resourcesPath, 'dist'),
-      ].join(path.delimiter);
+      env.NODE_PATH = path.join(process.resourcesPath, 'dist', 'node_modules');
     }
 
     // Set API credentials from provider
