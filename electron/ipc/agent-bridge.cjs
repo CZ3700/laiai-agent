@@ -37,15 +37,13 @@ function register(ctx) {
       return { ok: false, error: 'Agent CLI not found: ' + cliPath };
     }
 
-    // Find Node.js binary or use standalone CLI exe
+    // Find Node.js binary — use bundled runtime in packaged mode
     let nodeBin;
-    let useStandaloneExe = false;
     if (app.isPackaged) {
-      // Check if standalone cli exe exists (no Node.js dependency)
-      const cliExePath = path.join(process.resourcesPath, 'dist', process.platform === 'win32' ? 'cli-win.exe' : process.platform === 'darwin' ? 'cli-mac' : 'cli-linux');
-      if (fs.existsSync(cliExePath)) {
-        nodeBin = cliExePath;
-        useStandaloneExe = true;
+      // Use bundled Node.js runtime (no system dependency)
+      const bundledNode = path.join(process.resourcesPath, 'dist', 'node-runtime' + (process.platform === 'win32' ? '.exe' : ''));
+      if (fs.existsSync(bundledNode)) {
+        nodeBin = bundledNode;
       } else {
         // Fallback to system node
         nodeBin = 'node';
@@ -66,7 +64,7 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // Standalone exe doesn't need extra flags
+    // Bundled Node.js runtime handles ESM natively
 
     // Set API credentials from provider
     if (opts.provider) {
@@ -132,16 +130,15 @@ function register(ctx) {
     }
 
     // CLI arguments
-    // When using standalone exe, the exe IS the CLI — no separate cli.js needed
-    const args = useStandaloneExe ? [] : [cliPath];
-    args.push(
+    const args = [
+      cliPath,
       '-p',                           // Non-interactive (print) mode
       '--output-format', 'stream-json', // NDJSON output
       '--input-format', 'stream-json',  // NDJSON input
       '--verbose',                      // Required for stream-json
       '--dangerously-skip-permissions', // GUI handles permissions
       '--replay-user-messages',         // Echo user messages back for acknowledgment
-    );
+    ];
 
     // Add MCP config if available
     if (mcpConfigPath) {
