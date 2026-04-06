@@ -496,14 +496,26 @@ init();
 
 // ═══ GIT REQUIRED NOTICE ═══
 function showGitRequiredNotice() {
+  // Detect platform for correct download link
+  const platform = navigator.platform?.toLowerCase() || '';
+  let downloadUrl = 'https://git-scm.com/downloads';
+  if (platform.includes('win')) downloadUrl = 'https://git-scm.com/downloads/win';
+  else if (platform.includes('mac')) downloadUrl = 'https://git-scm.com/downloads/mac';
+  else if (platform.includes('linux')) downloadUrl = 'https://git-scm.com/downloads/linux';
+
+  // Platform-specific install hint
+  let installHint = '';
+  if (platform.includes('mac')) installHint = '\n\n' + t('git.mac_hint');
+  else if (platform.includes('linux')) installHint = '\n\n' + t('git.linux_hint');
+
   const notice = document.createElement('div');
   notice.className = 'git-notice';
   notice.innerHTML =
     '<div class="git-notice-inner">' +
     '<div class="git-notice-header">' + t('git.required_title') + '</div>' +
-    '<div class="git-notice-body">' + t('git.required_body') + '</div>' +
+    '<div class="git-notice-body">' + t('git.required_body') + installHint + '</div>' +
     '<div class="git-notice-actions">' +
-    '<button class="btn btn-p btn-sm" onclick="window.open(\'https://git-scm.com/downloads/win\');this.closest(\'.git-notice\').remove()">' + t('git.download') + '</button>' +
+    '<button class="btn btn-p btn-sm" onclick="window.open(\'' + downloadUrl + '\');this.closest(\'.git-notice\').remove()">' + t('git.download') + '</button>' +
     '<button class="btn btn-s btn-sm" onclick="this.closest(\'.git-notice\').remove()">' + t('git.later') + '</button>' +
     '</div></div>';
   document.body.appendChild(notice);
