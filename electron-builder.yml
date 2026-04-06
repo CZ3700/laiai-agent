@@ -75,7 +75,7 @@ linux:
 # To use self-hosted: change provider to "generic" and set url to your server
 publish:
   - provider: github
-    owner: laiai
+    owner: CZ3700
     repo: laiai-agent
     releaseType: release
   - provider: generic

@@ -37,16 +37,8 @@ function register(ctx) {
       return { ok: false, error: 'Agent CLI not found: ' + cliPath };
     }
 
-    // Find Node binary
-    let nodeBin = 'node';
-    if (!app.isPackaged) {
-      nodeBin = process.execPath;
-    } else {
-      try {
-        const { execSync } = require('child_process');
-        nodeBin = execSync('where node', { encoding: 'utf-8' }).split('\n')[0].trim();
-      } catch { nodeBin = 'node'; }
-    }
+    // Use Electron's built-in Node.js — works even if user has no system Node installed
+    const nodeBin = process.execPath;
 
     // Build environment
     const userCfg = loadUserConfig();

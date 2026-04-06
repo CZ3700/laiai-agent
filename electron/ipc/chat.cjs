@@ -131,7 +131,6 @@ function register(ctx) {
       return { ok: false, error: e.message };
     }
   });
-}
 
   // ── Email (SMTP) ──
   ipcMain.handle('send-email', async (_e, { smtp, from, to, subject, body, html }) => {
