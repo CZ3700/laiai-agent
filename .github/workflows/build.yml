@@ -30,6 +30,8 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
+        env:
+          AUTHORIZED: true
         run: npm install --legacy-peer-deps
 
       - name: Build renderer
