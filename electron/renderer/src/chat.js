@@ -18,8 +18,22 @@ let _pendingGenerate = null; // {type:'ppt'|'doc', topic:string} — auto-genera
 
 async function ensureAgentStarted() {
   if (_agentStarted) return true;
+  // Reload providers from state in case they were added after init
+  if (!state.providers.length) {
+    try {
+      const pd = await electronAPI.loadProviders();
+      if (pd && pd.providers) state.providers = pd.providers;
+    } catch {}
+  }
   const prov = state.providers.find(p => p.isDefault) || state.providers[0];
-  if (!prov) return false;
+  if (!prov) {
+    toast(t('err.no_provider'), 'error');
+    return false;
+  }
+  if (!prov.baseUrl || !prov.apiKey) {
+    toast(t('err.no_api_key'), 'error');
+    return false;
+  }
   const r = await electronAPI.agentStart({
     provider: { baseUrl: prov.baseUrl, apiKey: prov.apiKey, defaultModel: prov.defaultModel || '' },
   });
@@ -28,6 +42,7 @@ async function ensureAgentStarted() {
     setupAgentListeners();
     return true;
   }
+  toast(t('err.connection_refused') + (r.error ? ': ' + friendlyError(r.error) : ''), 'error');
   return false;
 }
 
