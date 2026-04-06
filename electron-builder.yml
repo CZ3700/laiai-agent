@@ -19,8 +19,8 @@ files:
 
 # Extra resources copied outside asar (needed for node-pty to spawn cli.js)
 extraResources:
-  - from: dist/cli-bundle.mjs
-    to: dist/cli-bundle.mjs
+  - from: dist/cli.js
+    to: dist/cli.js
   - from: dist/node-runtime.exe
     to: dist/node-runtime.exe
   - from: config/models.json

@@ -64,7 +64,16 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // Bundled Node.js runtime handles ESM natively
+    // Point NODE_PATH to the app's node_modules so cli.js can find dependencies
+    if (app.isPackaged) {
+      const appPath = path.join(process.resourcesPath, 'app.asar');
+      const appUnpackedPath = path.join(process.resourcesPath, 'app.asar.unpacked');
+      env.NODE_PATH = [
+        path.join(appPath, 'node_modules'),
+        path.join(appUnpackedPath, 'node_modules'),
+        path.join(process.resourcesPath, 'dist'),
+      ].join(path.delimiter);
+    }
 
     // Set API credentials from provider
     if (opts.provider) {
@@ -131,6 +140,7 @@ function register(ctx) {
 
     // CLI arguments
     const args = [
+      '--experimental-detect-module',
       cliPath,
       '-p',                           // Non-interactive (print) mode
       '--output-format', 'stream-json', // NDJSON output
