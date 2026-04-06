@@ -69,9 +69,11 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // If using Electron as Node.js runtime, set the flag
+    // If using Electron as Node.js runtime, set the flags
     if (useElectronAsNode) {
       env.ELECTRON_RUN_AS_NODE = '1';
+      // cli.js uses ESM imports — tell Node.js to detect module type automatically
+      env.NODE_OPTIONS = (env.NODE_OPTIONS || '') + ' --experimental-detect-module';
     }
 
     // Set API credentials from provider
