@@ -164,11 +164,16 @@ function register(ctx) {
       args.push('--continue');
     }
 
-    // Optional: working directory
-    const cwd = opts.cwd || projectRoot;
+    // Working directory — must be a real path, not inside asar
+    let cwd = opts.cwd || projectRoot;
+    // If CWD is inside an asar archive, use user's home directory instead
+    if (cwd.includes('.asar')) {
+      cwd = require('os').homedir();
+    }
 
     _log('[agent-bridge] Spawning: ' + nodeBin + ' ' + args.join(' '));
     _log('[agent-bridge] CWD: ' + cwd);
+    _log('[agent-bridge] ELECTRON_RUN_AS_NODE: ' + (env.ELECTRON_RUN_AS_NODE || 'no'));
 
     agentProcess = spawn(nodeBin, args, {
       cwd,
