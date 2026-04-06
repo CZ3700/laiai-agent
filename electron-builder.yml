@@ -1,0 +1,86 @@
+appId: ai.laiai.agent
+electronVersion: 33.4.11
+productName: LaiaiAgent
+copyright: Copyright © 2026 莱艾科技
+
+directories:
+  output: release
+
+# Files to include in the app bundle
+files:
+  - electron/**/*
+  - dist/cli.js
+  - dist/cli.js.map
+  - config/**/*
+  - package.json
+  - node_modules/**/*
+  - "!node_modules/electron"
+  - "!node_modules/electron/**/*"
+
+# Extra resources copied outside asar (needed for node-pty to spawn cli.js)
+extraResources:
+  - from: dist/cli.js
+    to: dist/cli.js
+  - from: dist/cli.js.map
+    to: dist/cli.js.map
+  - from: config/models.json
+    to: config/models.json
+  - from: electron/assets
+    to: electron/assets
+
+# ─── Windows ───
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: dir
+      arch:
+        - x64
+  icon: electron/icon.ico
+  signDlls: false
+  forceCodeSigning: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: LaiaiAgent
+
+# ─── macOS ───
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: electron/icon.icns
+  category: public.app-category.developer-tools
+
+dmg:
+  title: LaiaiAgent
+
+# ─── Linux ───
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: electron/icon.png
+  category: Development
+
+# ─── Auto Update ───
+# Supports both GitHub Releases and self-hosted server
+# To use self-hosted: change provider to "generic" and set url to your server
+publish:
+  - provider: github
+    owner: laiai
+    repo: laiai-agent
+    releaseType: release
+  - provider: generic
+    url: https://releases.laiai.ai/updates/
+
+# node-pty must be rebuilt for the target Electron version
+nodeGypRebuild: false
+npmRebuild: false

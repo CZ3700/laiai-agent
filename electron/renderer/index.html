@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html data-theme="dark" data-lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' http://localhost:* https://video.laiai.ai https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' https://video.laiai.ai data: file:; script-src 'self' 'unsafe-inline' http://localhost:* blob:; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:*; worker-src 'self' blob:;">
+<title>LaiaiAgent</title>
+<link rel="stylesheet" href="vendor/xterm.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app">
+
+<!-- ═══ TITLEBAR ═══ -->
+<div id="titlebar">
+  <div class="tb-brand">
+    <img src="assets/logo.png" alt="" onerror="this.style.display='none'">
+    <span>LaiaiAgent</span>
+    <span class="tb-version" id="ver">v0.0.1</span>
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-controls">
+    <button class="wb" onclick="electronAPI.winMinimize()" aria-label="Minimize window"><svg viewBox="0 0 12 12"><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    <button class="wb" onclick="electronAPI.winMaximize()" aria-label="Maximize window"><svg viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="wb x" onclick="electronAPI.winClose()" aria-label="Close window"><svg viewBox="0 0 12 12"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main" role="main">
+
+<!-- MODE RAIL -->
+<div id="mode-rail" role="navigation" aria-label="Mode navigation">
+  <button class="mr-btn active" id="mr-chat" onclick="switchMode('chat')" title="Chat" aria-label="Switch to Chat mode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+  </button>
+  <button class="mr-btn" id="mr-ide" onclick="switchMode('ide')" title="IDE" aria-label="Switch to IDE mode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+  </button>
+  <div class="mr-spacer"></div>
+  <button class="mr-btn" onclick="openSettings()" title="Settings" aria-label="Open settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</div>
+
+<!-- SESSION SIDEBAR -->
+<div id="session-sidebar" role="complementary" aria-label="Chat sessions">
+  <div class="ss-header">
+    <button class="ss-new" onclick="newChat()" title="新建对话" data-i18n-title="title.new_chat" aria-label="New chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span data-i18n="chat.new">新对话</span>
+    </button>
+  </div>
+  <div class="ss-search-wrap">
+    <input class="ss-search" id="ss-search" placeholder="搜索会话..." data-i18n-placeholder="ph.search_sessions" oninput="renderSessionList()">
+  </div>
+  <div class="ss-list" id="ss-list"></div>
+</div>
+
+<!-- OLD SIDEBAR DELETED (Phase 0 cleanup) -->
+
+<!-- ═══ CONTENT ═══ -->
+<div id="content" style="display:flex;flex:1;overflow:hidden">
+
+<!-- IDE -->
+<div class="mode" id="page-ide">
+  <div class="ide-layout">
+    <!-- File Tree -->
+    <div class="ide-filetree" id="ide-filetree">
+      <div class="ft-header">
+        <span>Explorer</span>
+        <button onclick="openFolder()" title="打开文件夹" data-i18n-title="title.open_folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
+        <button onclick="refreshFileTree()" title="刷新" data-i18n-title="title.refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+      </div>
+      <div style="padding:4px 8px"><input id="ft-search" placeholder="搜索文件..." data-i18n-placeholder="ph.search_files" oninput="filterFileTree()" style="width:100%;padding:4px 8px;background:var(--bg-3);border:1px solid var(--border-1);border-radius:5px;color:var(--t1);font-size:11px;outline:none"></div>
+      <div class="ft-list" id="ft-list"></div>
+    </div>
+    <div class="resize-handle" id="rh-tree"></div>
+    <!-- Editor -->
+    <div class="ide-center">
+      <div class="ide-tabbar">
+        <div class="editor-tabs" id="editor-tabs"></div>
+        <div class="ide-tabbar-actions">
+          <button class="ct-btn" onclick="showCommandPalette()" title="Command Palette (Ctrl+Shift+P)" style="padding:2px 8px;font-size:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </button>
+          <button class="ct-btn" onclick="toggleQuickOpen()" title="Quick Open (Ctrl+P)" style="padding:2px 8px;font-size:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button class="ct-btn" onclick="toggleIdeTerminal()" title="Terminal" style="padding:2px 8px;font-size:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </button>
+          <button class="ct-btn" onclick="toggleIdeChat()" title="AI Chat" style="padding:2px 8px;font-size:10px" id="ide-chat-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="monaco-container">
+        <div class="ed-welcome" id="ed-welcome">
+          <img src="assets/logo.png" alt="LaiaiAgent" style="width:56px;height:56px;border-radius:14px;opacity:.6;margin-bottom:4px">
+          <h3 style="font-size:18px;font-weight:800;letter-spacing:-.3px">LaiaiAgent IDE</h3>
+          <p style="margin-bottom:20px" data-i18n="ide.subtitle">AI 驱动的智能代码编辑器</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:280px">
+            <button class="btn btn-s btn-sm" onclick="toggleQuickOpen()" style="justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Ctrl+P</button>
+            <button class="btn btn-s btn-sm" onclick="toggleIdeTerminal()" style="justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> Ctrl+`</button>
+          </div>
+          <div style="margin-top:24px;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--t4)">
+            <span><kbd style="background:var(--bg-3);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px">Ctrl+S</kbd> <span data-i18n="ide.save_file">保存文件</span></span>
+            <span><kbd style="background:var(--bg-3);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px">Ctrl+W</kbd> <span data-i18n="ide.close_tab">关闭标签</span></span>
+            <span data-i18n="ide.send_to_chat">右键选中代码 → 发送到 AI Chat</span>
+          </div>
+        </div>
+      </div>
+      <!-- Bottom Terminal -->
+      <div class="ide-bottom-term" id="ide-bottom-term">
+        <div class="ide-bottom-term-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Terminal</span>
+          <button onclick="toggleIdeTerminal()" style="margin-left:auto;background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:3px" title="关闭终端" data-i18n-title="title.close_terminal">✕</button>
+        </div>
+        <div id="ide-term-container"></div>
+      </div>
+    </div>
+    <div class="resize-handle" id="rh-chat" style="display:none"></div>
+    <!-- Chat Panel (reuses existing chat system) -->
+    <div class="ide-chat" id="ide-chat">
+      <div class="chat-topbar" style="border-bottom:1px solid var(--border-0)">
+        <span style="font-size:11px;font-weight:600;color:var(--t3);padding:0 8px">AI Chat</span>
+        <div class="chat-sessions-scroll" id="ide-chat-sessions" style="flex:1"></div>
+        <button class="chat-new-btn" onclick="newChat();renderIdeChatSessions()" title="新建对话" data-i18n-title="title.new_chat" aria-label="New chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+      <div class="tw-main" id="ide-chat-scroll" style="flex:1;overflow-y:auto">
+        <div class="tw-main-inner" id="ide-chat-messages" style="padding:16px"></div>
+      </div>
+      <div class="tw-input-area" style="border-top:1px solid var(--border-0);padding:8px 12px 12px">
+        <div class="tw-input-wrap" style="max-width:100%">
+          <textarea class="tw-input" id="ide-chat-input" rows="1" placeholder="Ask AI..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendIdeChat()}" oninput="autoResize(this)" style="font-size:12px;padding:8px 12px;border-radius:10px"></textarea>
+          <button class="tw-send" onclick="sendIdeChat()" style="width:34px;height:34px;border-radius:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TERMINAL -->
+<div class="mode active" id="page-terminal">
+  <div class="term-bar" style="display:none">
+    <span class="dot" id="td" style="background:var(--t4)"></span>
+    <span class="status" id="ts" data-i18n="term.idle">Idle</span>
+    <span class="spacer"></span>
+    <div class="term-mode-tabs">
+      <button class="term-mode-tab active" onclick="setTermMode('chat')" id="tab-chat">Chat</button>
+      <button class="term-mode-tab" onclick="setTermMode('terminal')" id="tab-term">Terminal</button>
+    </div>
+    <select class="term-sel" id="tp" title="LaiaiAgent Model"></select>
+    <button class="btn btn-p btn-sm" id="bt-start" onclick="startTerm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span data-i18n="term.start">Start</span>
+    </button>
+    <button class="btn btn-d btn-sm" id="bt-stop" onclick="stopTerm()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      <span data-i18n="term.stop">Stop</span>
+    </button>
+  </div>
+  <div id="term-area" class="mode-chat">
+    <!-- Web UI Chat View -->
+    <div class="tw" id="tw">
+      <div class="chat-topbar">
+        <div class="chat-sessions-scroll" id="chat-session-list"></div>
+        <button class="chat-new-btn" onclick="newChat()" title="New chat" data-i18n-title="title.new_chat" aria-label="New chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <!-- Chat Search Bar (hidden by default) -->
+      <div id="chat-search-bar" class="chat-search-bar hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="chat-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="chat-search-input" class="chat-search-input" data-i18n-placeholder="chat.search_ph" placeholder="Search messages..." oninput="searchChatMessages(this.value)">
+        <span id="chat-search-count" class="chat-search-count"></span>
+        <button class="btn btn-xs" onclick="chatSearchNav(-1)" type="button" title="Previous">↑</button>
+        <button class="btn btn-xs" onclick="chatSearchNav(1)" type="button" title="Next">↓</button>
+        <button class="btn btn-xs" onclick="closeChatSearch()" type="button">✕</button>
+      </div>
+      <div class="tw-main" id="chat-scroll" style="position:relative">
+        <div class="chat-drop-zone" id="chat-drop-zone">Drop files here</div>
+        <div class="tw-main-inner">
+          <!-- Hero (hidden when messages exist) -->
+          <div class="tw-hero" id="chat-hero">
+            <img class="tw-hero-logo" src="assets/logo.png" alt="LaiaiAgent" onerror="this.style.display='none'">
+            <h2>LaiaiAgent</h2>
+            <div class="tw-subtitle" data-i18n="hero.subtitle">你的全能 AI 助手</div>
+            <div class="tw-caps">
+              <span class="tw-cap" data-i18n="cap.chat">Chat</span>
+              <span class="tw-cap" data-i18n="cap.code">Code</span>
+              <span class="tw-cap" data-i18n="cap.image">Image</span>
+              <span class="tw-cap" data-i18n="cap.search">Search</span>
+              <span class="tw-cap" data-i18n="cap.file">Files</span>
+              <span class="tw-cap" data-i18n="cap.web">Web</span>
+              <span class="tw-cap" data-i18n="cap.terminal">Terminal</span>
+            </div>
+          </div>
+          <div class="tw-grid" id="chat-quick-grid">
+            <div class="tw-card" onclick="sendQuick(t('quick.image_prompt'))">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.image">AI Image</div><div class="tw-card-d" data-i18n="quick.image_d">Generate a sunset by the sea</div></div>
+            </div>
+            <div class="tw-card" onclick="quickAction('ppt')">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.ppt">PPT</div><div class="tw-card-d" data-i18n="quick.ppt_d">AI generates a slide deck</div></div>
+            </div>
+            <div class="tw-card" onclick="quickAction('doc')">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.doc">Document</div><div class="tw-card-d" data-i18n="quick.doc_d">AI writes a professional doc</div></div>
+            </div>
+            <div class="tw-card" onclick="sendQuick(t('quick.code_prompt'))">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.code">Code</div><div class="tw-card-d" data-i18n="quick.code_d">Python quicksort function</div></div>
+            </div>
+            <div class="tw-card" onclick="sendQuick(t('quick.search_prompt'))">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.search">Search</div><div class="tw-card-d" data-i18n="quick.search_d">Search latest AI news</div></div>
+            </div>
+            <div class="tw-card" onclick="quickAction('email')">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.email">Email</div><div class="tw-card-d" data-i18n="quick.email_d">AI drafts and sends email</div></div>
+            </div>
+            <div class="tw-card" onclick="quickAction('translate')">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.translate">Translate</div><div class="tw-card-d" data-i18n="quick.translate_d">Translate between languages</div></div>
+            </div>
+            <div class="tw-card" onclick="sendQuick(t('quick.qa_prompt'))">
+              <div class="tw-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+              <div class="tw-card-body"><div class="tw-card-t" data-i18n="quick.qa">Q&A</div><div class="tw-card-d" data-i18n="quick.qa_d">Explain quantum computing</div></div>
+            </div>
+          </div>
+          <!-- Chat messages container -->
+          <div class="chat-messages" id="chat-messages"></div>
+        </div>
+      </div>
+      <div class="tw-input-area">
+        <div class="tw-input-wrap">
+          <!-- [+] Action Menu Button -->
+          <div style="position:relative;flex-shrink:0">
+            <button class="action-plus" onclick="toggleActionMenu()" title="More" data-i18n-title="menu.more" aria-label="Action menu" aria-haspopup="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="ct-menu action-panel" id="action-menu" style="bottom:calc(100% + 8px);min-width:280px">
+              <div class="action-section-label" data-i18n="menu.create">Create</div>
+              <div class="ct-menu-item" onclick="closeActionMenu();quickAction('ppt')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span data-i18n="menu.gen_ppt">PPT Presentation</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();quickAction('doc')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="menu.gen_doc">Word Document</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();insertCmd('/image ')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span data-i18n="menu.gen_image">AI Image</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();insertCmd('/video ')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span data-i18n="menu.gen_video">AI Video</span></div>
+              <div class="action-divider"></div>
+              <div class="action-section-label" data-i18n="menu.tools">Tools</div>
+              <div class="ct-menu-item" onclick="closeActionMenu();quickAction('translate')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="menu.translate">Translate</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();quickAction('email')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg><span data-i18n="menu.email">Compose Email</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();insertCmd('/tts ')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg><span data-i18n="menu.tts">Text to Speech</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();toggleGallery()"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span data-i18n="menu.gallery">Image Gallery</span></div>
+              <div class="action-divider"></div>
+              <div class="action-section-label" data-i18n="menu.dev">Development</div>
+              <div class="ct-menu-item" onclick="closeActionMenu();runSkillInChat('Review code changes for quality and bugs')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="menu.review">Code Review</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();runSkillInChat('Analyze project structure and tech stack')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="menu.analyze">Analyze Project</span></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();runSkillInChat('Generate a concise commit message for current changes')"><svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A6.6 6.6 0 0014 8a6 6 0 10-7 5.9"/><polyline points="9 17 4 12 9 7"/></svg><span data-i18n="menu.commit">Generate Commit</span></div>
+              <div class="action-divider"></div>
+              <div class="ct-menu-item" onclick="closeActionMenu();chatAttach()"><span class="action-icon">📎</span><span data-i18n="menu.upload">Attach File</span></div>
+            </div>
+          </div>
+          <textarea class="tw-input" id="tw-input" rows="1" placeholder="输入消息，或使用 + 菜单..." data-i18n-placeholder="ph.input_message" onkeydown="chatKeyDown(event)" oninput="autoResize(this)" autocomplete="off"></textarea>
+          <button class="tw-mic" id="tw-mic-btn" onclick="toggleVoiceInput()" title="Voice input" aria-label="Voice input" data-i18n-title="chat.voice_input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button class="tw-send" id="tw-send-btn" onclick="sendChat()" title="Send" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="chat-input-footer">
+          <div style="position:relative">
+            <button class="ct-btn" onclick="toggleModelMenu()" id="ct-model-btn" title="Switch Model" data-i18n-title="menu.switch_model" aria-label="Switch AI model" aria-haspopup="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+              <span id="ct-model-name" data-i18n="chat.model_label">模型</span>
+            </button>
+            <div class="ct-menu" id="ct-model-menu" style="bottom:calc(100% + 4px);left:0;min-width:280px;max-height:360px;overflow-y:auto"></div>
+          </div>
+          <div style="position:relative">
+            <button class="ct-btn" onclick="toggleMoreMenu()" title="More">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <div class="ct-menu" id="ct-more-menu" style="bottom:calc(100% + 4px);left:0;min-width:200px">
+              <div class="ct-menu-item" onclick="exportCurrentChat('md')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span data-i18n="chat.export_md">Export as Markdown</span>
+              </div>
+              <div class="ct-menu-item" onclick="exportCurrentChat('docx')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h3"/></svg>
+                <span data-i18n="chat.export_docx">Export as Word (.docx)</span>
+              </div>
+              <div class="ct-menu-item" onclick="exportCurrentChat('pdf')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12h4M10 16h2"/></svg>
+                <span data-i18n="chat.export_pdf">Export as PDF</span>
+              </div>
+              <div class="ct-menu-item" onclick="exportCurrentChat('json')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span data-i18n="chat.export_json">Export as JSON</span>
+              </div>
+            </div>
+          </div>
+          <span class="chat-input-hint" data-i18n="chat.input_hint">Enter 发送 · Shift+Enter 换行</span>
+        </div>
+      </div>
+    </div>
+    <div class="term-loading" id="tl" style="display:none">
+      <div class="spinner"></div>
+      <span class="term-loading-text" data-i18n="term.starting">正在启动 LaiaiAgent...</span>
+    </div>
+    <div id="term-container"></div>
+  </div>
+</div>
+
+<!-- LEGACY PAGES (hidden, kept for JS compat until Phase 3 rewrite) -->
+<div class="page" id="page-sessions">
+  <div class="ph">
+    <h2 data-i18n="sess.title">Session History</h2>
+    <p data-i18n="sess.desc">Browse and resume previous conversations.</p>
+    <div class="ph-actions">
+      <input type="text" id="sess-search" placeholder="Search sessions..." style="flex:1;padding:7px 12px;background:var(--bg-3);border:1px solid var(--border-1);border-radius:8px;color:var(--t1);font-size:12px;outline:none" oninput="filterSessions()">
+      <button class="btn btn-s btn-sm" onclick="loadSessions()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <span data-i18n="btn.refresh">Refresh</span>
+      </button>
+    </div>
+  </div>
+  <div class="pb" id="sess-list"></div>
+</div>
+
+<!-- PROVIDERS -->
+<div class="page" id="page-providers">
+  <div class="ph">
+    <h2 data-i18n="prov.title">API Providers</h2>
+    <p data-i18n="prov.desc">Manage AI API connections. Switch between providers instantly.</p>
+    <div class="ph-actions">
+      <button class="btn btn-p btn-sm" onclick="showAddProv()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span data-i18n="prov.add">Add Provider</span>
+      </button>
+    </div>
+  </div>
+  <div class="pb" id="prov-list"></div>
+</div>
+
+<!-- MODELS -->
+<div class="page" id="page-models">
+  <div class="ph">
+    <h2 data-i18n="model.title">Models</h2>
+    <p data-i18n="model.desc">Browse AI models from connected providers.</p>
+    <div class="ph-actions">
+      <input type="text" id="model-search" placeholder="Search..." style="flex:1;padding:7px 12px;background:var(--bg-3);border:1px solid var(--border-1);border-radius:8px;color:var(--t1);font-size:12px;outline:none" oninput="renderModels()">
+      <button class="btn btn-s btn-sm" onclick="refreshModels()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <span data-i18n="btn.refresh">Refresh</span>
+      </button>
+    </div>
+  </div>
+  <div class="pb"><div class="model-grid" id="model-list"></div><div class="empty" id="model-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><h3 data-i18n="model.empty">No models yet</h3><p data-i18n="model.empty_d">Connect a provider to discover models.</p></div></div>
+</div>
+
+<!-- TOOLS -->
+<div class="page" id="page-tools">
+  <div class="ph">
+    <h2 data-i18n="tools.title">Tools & Capabilities</h2>
+    <p data-i18n="tools.desc">All tools available to the AI assistant.</p>
+    <div class="ph-actions">
+      <input type="text" id="tool-search" placeholder="Filter tools..." style="flex:1;padding:7px 12px;background:var(--bg-3);border:1px solid var(--border-1);border-radius:8px;color:var(--t1);font-size:12px;outline:none" oninput="renderTools()">
+    </div>
+  </div>
+  <div class="pb">
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap" id="tool-filters"></div>
+    <div class="tool-grid" id="tool-list"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="ph"><h2 data-i18n="set.title">Settings</h2><p data-i18n="set.desc">Configure your LaiaiAgent experience.</p></div>
+  <div class="pb">
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/></svg><span data-i18n="set.appearance">Appearance</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="set.theme">Theme</div><div class="set-desc" data-i18n="set.theme_d">深色或浅色模式</div></div><select class="sel" id="s-theme" onchange="setTheme(this.value)"><option value="dark" data-i18n="set.dark">深色</option><option value="light" data-i18n="set.light">浅色</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.lang">Language</div><div class="set-desc" data-i18n="set.lang_d">Interface language</div></div><select class="sel" id="s-lang" onchange="setLang(this.value)"><option value="zh">中文</option><option value="en">English</option></select></div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-i18n="set.terminal">Terminal</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="set.font">Font Size</div></div><select class="sel" id="s-font" onchange="setTermFont(this.value)"><option value="12">12</option><option value="13">13</option><option value="14" selected>14</option><option value="15">15</option><option value="16">16</option><option value="18">18</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.defprov">Default Provider</div><div class="set-desc" data-i18n="set.defprov_d">Auto-selected on launch</div></div><select class="sel" id="s-defprov" onchange="setDefProv(this.value)"><option value="">--</option></select></div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span data-i18n="set.permissions">Permissions</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="set.perm_mode">Permission Mode</div><div class="set-desc" data-i18n="set.perm_mode_d">default / plan / acceptEdits / bypassPermissions</div></div><select class="sel" id="s-perm" onchange="saveCliSetting('permissions.defaultMode',this.value)"><option value="default">Default</option><option value="plan">Plan Mode</option><option value="acceptEdits">Accept Edits</option><option value="bypassPermissions">Bypass</option></select></div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2"/></svg><span data-i18n="set.advanced">Advanced</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="set.thinking">Always Enable Thinking</div></div><select class="sel" id="s-thinking" onchange="saveCliSetting('alwaysThinkingEnabled',this.value==='true')"><option value="true">On</option><option value="false">Off</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.effort">Effort Level</div></div><select class="sel" id="s-effort" onchange="saveCliSetting('effortLevel',this.value)"><option value="low">Low</option><option value="medium">Medium</option><option value="high" selected>High</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.output">Output Style</div><div class="set-desc">输出格式风格</div></div><select class="sel" onchange="saveCliSetting('outputStyle',this.value)"><option value="" data-i18n="opt.default">默认</option><option value="concise" data-i18n="opt.concise">简洁</option><option value="verbose" data-i18n="opt.verbose">详细</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.sandbox">Sandbox Mode</div><div class="set-desc">沙箱隔离执行</div></div><select class="sel" onchange="saveCliSetting('sandbox',this.value)"><option value="">Auto</option><option value="true" data-i18n="opt.enabled">启用</option><option value="false" data-i18n="opt.disabled">禁用</option></select></div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span data-i18n="set.privacy">隐私与数据</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="set.retention">数据保留天数</div><div class="set-desc" data-i18n="sess.retention_desc">会话记录保留时间 (0=不保留)</div></div><select class="sel" onchange="saveCliSetting('cleanupPeriodDays',parseInt(this.value))"><option value="7" data-i18n="opt.days_7">7天</option><option value="14" data-i18n="opt.days_14">14天</option><option value="30" selected data-i18n="opt.days_30">30天</option><option value="90" data-i18n="opt.days_90">90天</option><option value="0" data-i18n="opt.no_retain">不保留</option></select></div>
+      <div class="set-item" style="margin-top:6px"><div><div class="set-label" data-i18n="set.keybindings">快捷键</div><div class="set-desc" data-i18n="set.keybindings_d">常用键盘快捷键</div></div><button class="btn btn-s btn-sm" onclick="showKeybindings()" data-i18n="view_keybindings">查看快捷键</button></div>
+      <div id="keybindings-list" class="result-area" style="margin-top:8px"></div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="proxy.mode">代理模式</span></div>
+      <div class="set-item"><div><div class="set-label" data-i18n="proxy.mode">代理模式</div><div class="set-desc">配置 HTTP/SOCKS5 代理访问 API</div></div>
+        <select class="sel" id="s-proxy-mode" onchange="onProxyModeChange(this.value)"><option value="none" data-i18n="opt.none">无代理</option><option value="http">HTTP 代理</option><option value="socks5">SOCKS5 代理</option><option value="system" data-i18n="opt.system_proxy">系统代理</option></select>
+      </div>
+      <div id="proxy-fields" style="display:none;margin-top:8px">
+        <div class="set-item"><div><div class="set-label" data-i18n="proxy.address">代理地址</div></div><input class="sel" id="s-proxy-url" placeholder="e.g. 127.0.0.1:7890" data-i18n-placeholder="proxy.url_ph" style="width:200px;padding:4px 8px;font-family:'JetBrains Mono',monospace"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn btn-p btn-sm" onclick="saveProxy()" data-i18n="proxy.save_apply">保存并应用</button>
+          <button class="btn btn-s btn-sm" onclick="testProxy()" data-i18n="proxy.test_port">测试端口</button>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn btn-s btn-sm" onclick="checkCurrentIp()"><span data-i18n="proxy.check_ip">Check IP</span></button>
+      </div>
+      <div id="proxy-status" class="result-area" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MCP SERVERS -->
+<div class="page" id="page-mcp">
+  <div class="ph">
+    <h2 data-i18n="mcp.title">MCP Servers</h2>
+    <p data-i18n="mcp.desc">Manage Model Context Protocol servers for extended capabilities.</p>
+    <div class="ph-actions">
+      <button class="btn btn-p btn-sm" onclick="showAddMcp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span data-i18n="mcp.add">Add Server</span>
+      </button>
+      <button class="btn btn-s btn-sm" onclick="loadMcp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <span data-i18n="btn.refresh">Refresh</span>
+      </button>
+    </div>
+  </div>
+  <div class="pb">
+    <div id="mcp-list"></div>
+    <div class="empty" id="mcp-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+      <h3 data-i18n="mcp.empty">No MCP servers configured</h3>
+      <p data-i18n="mcp.empty_d">Add MCP servers to extend the AI assistant with custom tools, resources, and capabilities.</p>
+    </div>
+  </div>
+</div>
+
+<!-- USAGE -->
+<div class="page" id="page-usage">
+  <div class="ph">
+    <h2 data-i18n="usage.title">使用统计</h2>
+    <p data-i18n="usage.desc">会话数据与活动概览。</p>
+    <div class="ph-actions">
+      <button class="btn btn-s btn-sm" onclick="loadUsage()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg><span data-i18n="btn.refresh">Refresh</span></button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="usage-grid" id="usage-cards"></div>
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span data-i18n="usage.activity">近14天活动</span>
+      </div>
+      <div id="usage-chart"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENTS -->
+<div class="page" id="page-agents">
+  <div class="ph"><h2 data-i18n="agents.title">Agents 代理</h2><p data-i18n="agents.desc">AI 驱动的项目管理与代码操作。</p></div>
+  <div class="pb">
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span data-i18n="agents.git_status">Git Status</span></div>
+      <div id="agent-git-info" class="result-area show" data-i18n="agents.loading">Loading...</div>
+      <div class="action-bar">
+        <button class="btn btn-p btn-sm" onclick="runGit('status')" data-i18n="agents.status">Status</button>
+        <button class="btn btn-s btn-sm" onclick="runGit('log --oneline -10')" data-i18n="agents.log">Log</button>
+        <button class="btn btn-s btn-sm" onclick="runGit('diff --stat')" data-i18n="agents.changes">Changes</button>
+        <button class="btn btn-s btn-sm" onclick="runGit('branch -a')" data-i18n="agents.branches">Branches</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span data-i18n="agents.tasks">AI Tasks</span></div>
+      <p style="font-size:12px;color:var(--t3);margin-bottom:10px" data-i18n="agents.tasks_desc">Select a task for AI to execute:</p>
+      <div class="action-bar">
+        <button class="btn btn-p btn-sm" onclick="confirmAction('agents','Analyze Architecture','AI will scan the project structure, identify tech stack and module organization.','Analyze project directory structure and tech stack')" data-i18n="agents.analyze_arch">Analyze Architecture</button>
+        <button class="btn btn-s btn-sm" onclick="confirmAction('agents','Code Review','AI will review current Git changes for quality and suggestions.','Review code quality of current git changes')" data-i18n="agents.code_review">Code Review</button>
+        <button class="btn btn-s btn-sm" onclick="confirmAction('agents','Generate Commit','AI will analyze uncommitted changes and generate a commit message.','Generate a commit message for all uncommitted changes')" data-i18n="agents.gen_commit">Generate Commit</button>
+      </div>
+      <div id="agents-result" class="result-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SKILLS -->
+<div class="page" id="page-skills">
+  <div class="ph"><h2 data-i18n="skills.title">Skills 技能</h2><p data-i18n="skills.desc">一键执行 AI 技能，结果直接在页面展示。</p></div>
+  <div class="pb">
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span data-i18n="skills.input">Code/Context Input</span></div>
+      <p style="font-size:12px;color:var(--t3);margin-bottom:8px" data-i18n="skills.input_d">Paste code, error logs, or context for AI analysis:</p>
+      <textarea id="skill-input" class="skill-textarea" data-i18n-placeholder="skills.input_ph" placeholder="Paste code, errors, or project description..."></textarea>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-i18n="skills.choose">Choose Skill</span></div>
+      <div class="action-bar">
+        <button class="btn btn-p btn-sm" onclick="confirmSkill('Code Review','AI will review code quality, naming, potential bugs.','Review this code for quality and potential bugs')" data-i18n="skills.review">Code Review</button>
+        <button class="btn btn-s btn-sm" onclick="confirmSkill('Optimize','AI will find redundancy and performance issues.','Optimize this code for redundancy and improvements')" data-i18n="skills.optimize">Optimize</button>
+        <button class="btn btn-s btn-sm" onclick="confirmSkill('Debug','AI will diagnose errors and provide fixes.','Diagnose issues and provide fix solutions')" data-i18n="skills.debug">Debug</button>
+        <button class="btn btn-s btn-sm" onclick="confirmSkill('Generate Docs','AI will create documentation from code.','Generate documentation for this code')" data-i18n="skills.docs">Generate Docs</button>
+        <button class="btn btn-s btn-sm" onclick="confirmSkill('Write Tests','AI will generate unit test cases.','Write unit tests for this code')" data-i18n="skills.tests">Write Tests</button>
+        <button class="btn btn-s btn-sm" onclick="confirmSkill('Security Scan','AI will check for security vulnerabilities.','Check for security vulnerabilities and sensitive data leaks')" data-i18n="skills.security">Security Scan</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span data-i18n="skills.result">Results</span></div>
+      <div id="skills-result" class="result-area show" data-i18n="skills.result_ph">Select a skill and confirm to start...</div>
+    </div>
+  </div>
+</div>
+
+<!-- PLUGINS -->
+<div class="page" id="page-plugins">
+  <div class="ph">
+    <h2 data-i18n="plugins.title">Plugins</h2>
+    <p data-i18n="plugins.desc">Extend LaiaiAgent with custom commands, templates, and integrations.</p>
+    <div class="ph-actions">
+      <button class="btn btn-p btn-sm" onclick="showAddPlugin()" data-i18n="plugins.create">+ Create Plugin</button>
+    </div>
+  </div>
+  <div class="pb">
+    <!-- Plugin Categories -->
+    <div class="plugin-tabs">
+      <button class="plugin-tab active" onclick="filterPlugins('all',this)" data-i18n="plugins.all">All</button>
+      <button class="plugin-tab" onclick="filterPlugins('command',this)" data-i18n="plugins.commands">Commands</button>
+      <button class="plugin-tab" onclick="filterPlugins('template',this)" data-i18n="plugins.templates">Templates</button>
+      <button class="plugin-tab" onclick="filterPlugins('integration',this)" data-i18n="plugins.integrations">Integrations</button>
+    </div>
+
+    <!-- Installed Plugins -->
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v3"/></svg>
+        <span data-i18n="plugins.installed">Installed</span>
+        <span id="plugins-count" class="badge">0</span>
+      </div>
+      <div id="plugins-list"></div>
+    </div>
+
+    <!-- Plugin Marketplace -->
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <span data-i18n="plugins.marketplace">Marketplace</span>
+      </div>
+      <div id="plugins-market"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MEMORY -->
+<div class="page" id="page-memory">
+  <div class="ph"><h2 data-i18n="memory.title">Memory</h2><p data-i18n="memory.desc">AI persistent memory system.</p>
+    <div class="ph-actions">
+      <button class="btn btn-p btn-sm" onclick="loadLaiaiMd()" data-i18n="btn.refresh">Refresh</button>
+      <button class="btn btn-s btn-sm" onclick="createLaiaiMd()" data-i18n="memory.create_file">Create LAIAI.md</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span data-i18n="memory.config_title">Project Config</span> <span id="memory-file" class="memory-file-tag"></span></span></div>
+      <textarea id="memory-editor" class="skill-textarea" style="min-height:200px" data-i18n-placeholder="memory.editor_ph" placeholder="# LAIAI.md — Project instructions for AI..."></textarea>
+      <div class="action-bar" style="margin-top:10px">
+        <button class="btn btn-p btn-sm" onclick="saveLaiaiMd()" data-i18n="btn.save">Save</button>
+        <button class="btn btn-s btn-sm" onclick="genLaiaiMd()" data-i18n="memory.ai_gen">AI Generate Config</button>
+      </div>
+    </div>
+    <div id="memory-gen-result" class="result-area"></div>
+    <div class="card"><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg><span data-i18n="memory.ai_assistant">AI Memory Assistant</span></div>
+      <p class="card-desc" data-i18n="memory.analyze_instruction">Let AI analyze the project and generate a summary:</p>
+      <div class="action-bar">
+        <button class="btn btn-s btn-sm" onclick="confirmAction('memory','Analyze Tech Stack','AI will scan project files to identify languages, frameworks, and tools.','Analyze the tech stack, frameworks, and development tools')" data-i18n="memory.analyze_tech">Analyze Tech Stack</button>
+        <button class="btn btn-s btn-sm" onclick="confirmAction('memory','Analyze Architecture','AI will read directory structure and identify modules and components.','Analyze project directory structure and module organization')" data-i18n="memory.analyze_arch">Analyze Architecture</button>
+        <button class="btn btn-s btn-sm" onclick="confirmAction('memory','Analyze Pipeline','AI will check build scripts and CI config to summarize the pipeline.','Analyze the build, test, and deploy pipeline')" data-i18n="memory.analyze_pipeline">Analyze Pipeline</button>
+      </div>
+      <div id="memory-result" class="result-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BUDDY -->
+<div class="page" id="page-buddy">
+  <div class="ph"><h2 data-i18n="buddy.title">Buddy</h2><p data-i18n="buddy.desc">Your AI coding companion.</p></div>
+  <div class="pb">
+    <div class="buddy-stage">
+      <div id="buddy-sprite" class="buddy-sprite" onclick="buddyPet()" data-i18n-title="buddy.pet_hint" title="Click to pet">🐱</div>
+      <div id="buddy-mood" class="buddy-mood"></div>
+      <div id="buddy-hearts" class="buddy-hearts"></div>
+      <div class="action-bar" style="justify-content:center;margin-top:8px">
+        <button class="btn btn-p btn-sm" onclick="buddyPet()" data-i18n="buddy.pet">Pet 🐾</button>
+        <button class="btn btn-s btn-sm" onclick="buddyFeed()" data-i18n="buddy.feed">Feed 🍎</button>
+        <button class="btn btn-s btn-sm" onclick="buddyPlay()" data-i18n="buddy.play">Play 🎾</button>
+        <button class="btn btn-s btn-sm" onclick="buddyChange()" data-i18n="buddy.change">Change Pet</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span data-i18n="buddy.status">Pet Status</span></div>
+      <div class="buddy-stats">
+        <div><div class="buddy-stat-val" style="color:var(--accent-l)" id="buddy-level">Lv.1</div><div class="buddy-stat-label" data-i18n="buddy.level">Level</div></div>
+        <div><div class="buddy-stat-val" style="color:var(--green)" id="buddy-hp">❤️ 100</div><div class="buddy-stat-label" data-i18n="buddy.hp">HP</div></div>
+        <div><div class="buddy-stat-val" style="color:var(--yellow)" id="buddy-xp">⭐ 0</div><div class="buddy-stat-label" data-i18n="buddy.xp">XP</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-i18n="buddy.terminal">Terminal Interaction</span></div>
+      <p class="card-desc" data-i18n="buddy.terminal_desc">Use Buddy in the terminal — it shows animations while you code:</p>
+      <div class="action-bar" style="flex-wrap:wrap">
+        <button class="btn btn-s btn-sm" onclick="sendTermCmd('/buddy')" data-i18n="buddy.summon">Summon</button>
+        <button class="btn btn-s btn-sm" onclick="sendTermCmd('/buddy hat crown')" data-i18n="buddy.crown">Crown 👑</button>
+        <button class="btn btn-s btn-sm" onclick="sendTermCmd('/buddy hat party')" data-i18n="buddy.party">Party Hat 🎉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEAMS -->
+<div class="page" id="page-teams">
+  <div class="ph">
+    <h2 data-i18n="teams.title">Automation & Hooks</h2>
+    <p data-i18n="teams.desc">Configure event hooks and automation rules for your workflow.</p>
+  </div>
+  <div class="pb">
+    <!-- Event Hooks -->
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <span data-i18n="hooks.title">Event Hooks</span>
+        <button class="btn btn-p btn-sm" onclick="showAddHook()" style="margin-left:auto">+ <span data-i18n="hooks.add">Add Hook</span></button>
+      </div>
+      <p class="card-desc" data-i18n="hooks.desc">Run commands automatically when events occur (file save, chat send, etc.)</p>
+      <div id="hooks-list"></div>
+    </div>
+
+    <!-- Automation Templates -->
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span data-i18n="hooks.templates">Quick Automations</span>
+      </div>
+      <div id="hooks-templates" class="action-bar" style="flex-wrap:wrap"></div>
+    </div>
+
+    <!-- AI Tools -->
+    <div class="card">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span data-i18n="hooks.ai_tools">AI-Powered Tools</span>
+      </div>
+      <div class="action-bar" style="flex-wrap:wrap">
+        <button class="btn btn-s btn-sm" onclick="confirmAction('teams','Context Analysis','Analyze context window usage and suggest optimizations.','Analyze current project context window usage and suggest optimizations')" data-i18n="teams.context_opt">Context Optimization</button>
+        <button class="btn btn-s btn-sm" onclick="confirmAction('teams','Multi-Agent','Explain how multi-agent coordination works for complex tasks.','Explain multi-agent coordination: main agent assigns tasks, sub-agents execute in parallel, results merge')" data-i18n="teams.multi_agent">Multi-Agent Mode</button>
+      </div>
+      <div id="teams-result" class="result-area"></div>
+    </div>
+
+    <!-- Hook Editor -->
+    <div id="hook-editor" class="plugin-editor hidden">
+      <div class="plugin-editor-header">
+        <span data-i18n="hooks.editor_title">Hook Editor</span>
+        <button class="btn btn-xs" onclick="closeHookEditor()">✕</button>
+      </div>
+      <div class="sd-row"><label data-i18n="hooks.event">Event</label>
+        <select id="he-event" class="sd-select" title="Hook event type">
+          <option value="PreToolUse">Before Tool Use</option>
+          <option value="PostToolUse">After Tool Use</option>
+          <option value="Notification">Notification</option>
+          <option value="Stop">On Stop</option>
+        </select>
+      </div>
+      <div class="sd-row"><label data-i18n="hooks.matcher">Tool Matcher (optional)</label><input id="he-matcher" class="sd-input" placeholder="e.g. Bash, Edit, Write"></div>
+      <div class="sd-row"><label data-i18n="hooks.command">Command</label></div>
+      <textarea id="he-command" class="skill-textarea" rows="3" placeholder="Shell command to execute..."></textarea>
+      <div class="workflow-actions" style="margin-top:12px">
+        <button class="btn btn-p btn-sm" onclick="saveHook()" data-i18n="hooks.save">Save</button>
+        <button class="btn btn-s btn-sm" onclick="closeHookEditor()" data-i18n="hooks.cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div class="page" id="page-about">
+  <div class="pb">
+    <div class="about-center">
+      <img class="about-logo" src="assets/logo.png" onerror="this.style.display='none'">
+      <div class="about-name">LaiaiAgent</div>
+      <div class="about-ver" id="about-ver">v0.0.1</div>
+      <div class="about-desc" data-i18n="about.desc">An intelligent programming assistant that understands your codebase, edits files, runs terminal commands, and handles complete workflows for you.</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-s" onclick="electronAPI.openFile('https://www.laiai.ai')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="about.web">Website</span></button>
+        <button class="btn btn-s" onclick="electronAPI.openFile('https://docs.laiai.ai/')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span data-i18n="about.support">Support</span></button>
+      </div>
+      <div style="margin-top:40px;color:var(--t4);font-size:11px" data-i18n="about.copyright">© 2026 莱艾科技</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /body -->
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span class="sb-dot" id="sb-dot" style="background:var(--t4)"></span>
+  <span id="sb-status">Ready</span>
+  <span class="sb-sep"></span>
+  <span id="sb-provider">--</span>
+  <span class="sb-sep"></span>
+  <span id="sb-model">--</span>
+  <div style="flex:1"></div>
+  <span id="sb-version">v0.0.1</span>
+</div>
+
+</div><!-- /app -->
+
+<!-- ═══ PROVIDER MODAL ═══ -->
+<div class="modal-bg" id="m-prov">
+  <div class="modal">
+    <div class="modal-title" id="mp-title" data-i18n="prov.add">添加 API 提供商</div>
+    <div class="f">
+      <label data-i18n="prov.domain">站点域名</label>
+      <input id="mp-domain" placeholder="e.g. openrouter.ai or api.deepseek.com" data-i18n-placeholder="prov.domain_ph" spellcheck="false" oninput="onDomainInput()">
+      <div class="hint" data-i18n="prov.domain_hint">输入域名后自动补齐为完整 API 地址</div>
+    </div>
+    <div class="f" id="mp-url-row" style="display:none">
+      <label data-i18n="prov.url">完整 API 地址</label>
+      <input id="mp-url" placeholder="https://api.example.com/v1" spellcheck="false">
+    </div>
+    <div class="f">
+      <label data-i18n="prov.key">API Key</label>
+      <div class="ig"><input type="password" id="mp-key" placeholder="sk-..." spellcheck="false"><button onclick="toggleVis('mp-key')" title="Show/Hide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+    </div>
+    <div class="f">
+      <label data-i18n="prov.name_label">名称/标签</label>
+      <input id="mp-label" placeholder="Optional: Name this provider" data-i18n-placeholder="prov.label_hint" spellcheck="false">
+    </div>
+    <div id="mp-status" style="display:none;padding:8px 12px;border-radius:8px;font-size:11px;margin-top:8px"></div>
+    <div id="mp-models-section" style="display:none;margin-top:12px">
+      <label style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block" data-i18n="prov.available_models">可用模型</label>
+      <div id="mp-model-list" style="max-height:160px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-s" onclick="closeProv()" aria-label="Cancel"><span data-i18n="btn.cancel">取消</span></button>
+      <button class="btn btn-s" id="mp-test" onclick="testProvSimple()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span data-i18n="prov.test_connect">测试连接</span>
+      </button>
+      <button class="btn btn-p" id="mp-save-btn" onclick="saveProv()" disabled><span data-i18n="btn.save">保存</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QUICK OPEN (Ctrl+P) ═══ -->
+<div class="quick-open-overlay" id="qo-overlay" onclick="if(event.target===this)closeQuickOpen()">
+  <div class="quick-open">
+    <input class="qo-input" id="qo-input" placeholder="Search files..." data-i18n-placeholder="ph.search_files" oninput="filterQuickOpen()" onkeydown="qoKeyDown(event)" autocomplete="off">
+    <div class="qo-list" id="qo-list"></div>
+  </div>
+</div>
+
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div class="modal-bg" id="m-confirm">
+  <div class="modal">
+    <div class="modal-title" id="mc-title" data-i18n="modal.confirm">确认操作</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--accent-l);margin-bottom:8px" id="mc-skill-name"></div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7;background:var(--bg-3);padding:12px 16px;border-radius:8px" id="mc-desc"></div>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:16px" data-i18n="modal.workflow">
+      将你输入的代码/上下文 → 发送到 AI API → 分析处理 → 结果显示
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-s" onclick="closeConfirm()" aria-label="Cancel"><span data-i18n="modal.cancel">取消</span></button>
+      <button class="btn btn-p" id="mc-go" onclick="execConfirmedSkill()"><span data-i18n="modal.execute">确认执行</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MCP MODAL ═══ -->
+<div class="modal-bg" id="m-mcp">
+  <div class="modal">
+    <div class="modal-title" id="mm-title" data-i18n="mcp.add">Add MCP Server</div>
+    <div class="f"><label data-i18n="mcp.sname">Server Name</label><input id="mm-name" placeholder="my-server" spellcheck="false"></div>
+    <div class="f"><label data-i18n="mcp.stype">Type</label>
+      <select id="mm-type" title="Server type" class="sel" style="width:100%;padding:8px 12px;border-radius:8px;font-size:12px" onchange="mcpTypeChanged()">
+        <option value="stdio">stdio (Local Process)</option>
+        <option value="sse">sse (Server-Sent Events)</option>
+        <option value="http">http (HTTP Endpoint)</option>
+      </select>
+    </div>
+    <div id="mm-stdio-fields">
+      <div class="f"><label data-i18n="mcp.command">Command</label><input id="mm-cmd" placeholder="npx -y @modelcontextprotocol/server-xxx" spellcheck="false"></div>
+      <div class="f"><label data-i18n="mcp.args">Arguments (comma-separated)</label><input id="mm-args" placeholder="--port,3000" spellcheck="false"></div>
+    </div>
+    <div id="mm-url-field" style="display:none">
+      <div class="f"><label>URL</label><input id="mm-url" placeholder="https://mcp-server.example.com" spellcheck="false"></div>
+    </div>
+    <div class="f"><label data-i18n="mcp.scope">Scope</label>
+      <select id="mm-scope" title="Scope" class="sel" style="width:100%;padding:8px 12px;border-radius:8px;font-size:12px">
+        <option value="user">User (Global)</option>
+        <option value="project">Project (Local)</option>
+      </select>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label" data-i18n="mcp.quick_install">Quick Install (npm package)</div>
+      <div class="quick-install-row">
+        <input id="mm-npm-pkg" class="sd-input" placeholder="@modelcontextprotocol/server-xxx or any npm package" spellcheck="false">
+        <button class="btn btn-p btn-sm" onclick="quickInstallMcp()" type="button" data-i18n="mcp.install_pkg">Install</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-s" onclick="closeMcp()" aria-label="Cancel"><span data-i18n="btn.cancel">Cancel</span></button>
+      <button class="btn btn-p" onclick="saveMcp()"><span data-i18n="btn.save">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SPLASH SCREEN ═══ -->
+<div id="splash">
+  <img class="sp-logo" src="assets/logo.png" alt="LaiaiAgent" onerror="this.style.display='none'">
+  <div class="sp-text">LaiaiAgent</div>
+  <div class="sp-sub">Intelligent Programming Assistant</div>
+  <div class="sp-bar"><div class="sp-fill"></div></div>
+</div>
+
+<!-- ═══ ONBOARDING ═══ -->
+<div id="onboarding" class="hidden">
+  <img class="ob-logo" src="assets/logo.png" onerror="this.style.display='none'">
+  <div class="ob-title" data-i18n="ob.welcome">Welcome to LaiaiAgent</div>
+  <div class="ob-sub" data-i18n="ob.sub">Your intelligent programming assistant. Set up in seconds.</div>
+  <div class="ob-card">
+    <div class="ob-steps"><div class="ob-step done"></div><div class="ob-step cur" id="ob-s2"></div><div class="ob-step" id="ob-s3"></div></div>
+    <div id="ob-p1">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px" data-i18n="ob.choose">输入 API 站点</div>
+      <div class="f"><label data-i18n="prov.domain">站点域名</label><input id="ob-domain" placeholder="e.g. openrouter.ai" data-i18n-placeholder="prov.domain_ph_ob" spellcheck="false" oninput="obDomainInput()"></div>
+      <div class="f"><label data-i18n="prov.url">API 地址 (自动补齐)</label><input id="ob-url" spellcheck="false"></div>
+      <div class="f"><label data-i18n="prov.key">API Key</label><input type="password" id="ob-key" spellcheck="false"></div>
+      <div id="ob-status" style="display:none;padding:8px 12px;border-radius:8px;font-size:11px;margin-top:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-s" style="flex:1" onclick="obTest()"><span data-i18n="prov.test">Test</span></button>
+        <button class="btn btn-p" style="flex:1" id="ob-next" disabled onclick="obNext()"><span data-i18n="btn.next">Next</span></button>
+      </div>
+    </div>
+    <div id="ob-p2" style="display:none">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px" data-i18n="ob.model">Choose model</div>
+      <select id="ob-model" style="width:100%;padding:9px 12px;background:var(--bg-3);border:1px solid var(--border-1);border-radius:8px;color:var(--t1);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:14px"></select>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-s" onclick="obBack()"><span data-i18n="btn.back">Back</span></button>
+        <button class="btn btn-p" style="flex:1" onclick="obFinish()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span data-i18n="ob.start">Get Started</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS DRAWER ═══ -->
+<!-- Plugin Editor Modal (global) -->
+<div id="plugin-editor-overlay" class="modal-overlay hidden" onclick="closePluginEditor()"></div>
+<div id="plugin-editor" class="modal-dialog hidden">
+  <div class="modal-header">
+    <span id="plugin-editor-title" data-i18n="plugins.create_title">Create Plugin</span>
+    <button class="btn btn-xs" onclick="closePluginEditor()" type="button">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="sd-row"><label data-i18n="plugins.name">Name</label><input id="pe-name" class="sd-input" placeholder="My Plugin"></div>
+    <div class="sd-row"><label data-i18n="plugins.type">Type</label>
+      <select id="pe-type" class="sd-select" title="Plugin type" onchange="onPluginTypeChange()">
+        <option value="command">Custom Command</option>
+        <option value="template">Prompt Template</option>
+        <option value="integration">Integration</option>
+      </select>
+    </div>
+    <div id="pe-command-opts">
+      <div class="sd-row"><label data-i18n="plugins.trigger">Trigger</label><input id="pe-trigger" class="sd-input" placeholder="/mycommand"></div>
+    </div>
+    <div class="sd-row"><label data-i18n="plugins.description">Description</label><input id="pe-desc" class="sd-input" placeholder="What does this plugin do?"></div>
+    <div class="sd-row"><label data-i18n="plugins.prompt">Prompt / Content</label></div>
+    <textarea id="pe-prompt" class="skill-textarea" rows="5" placeholder="Enter the prompt template or integration config..."></textarea>
+    <div class="sd-row hidden" id="pe-env-row">
+      <label data-i18n="plugins.env_vars">Environment Variables</label>
+      <input id="pe-env" class="sd-input" placeholder="KEY1=value1, KEY2=value2">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-p btn-sm" onclick="savePlugin()" type="button" data-i18n="plugins.save">Save</button>
+    <button class="btn btn-s btn-sm" onclick="closePluginEditor()" type="button" data-i18n="plugins.cancel">Cancel</button>
+  </div>
+</div>
+
+<div id="settings-overlay" onclick="closeSettings()"></div>
+<div id="settings-drawer">
+  <div class="sd-header">
+    <h3>Settings</h3>
+    <button class="sd-close" onclick="closeSettings()" title="Close" aria-label="Close settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="sd-tabs">
+    <div class="sd-tab active" onclick="sdTab('general',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span data-i18n="tab.general">General</span></div>
+    <div class="sd-tab" onclick="sdTab('providers',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span data-i18n="tab.connect">Connect</span></div>
+    <div class="sd-tab" onclick="sdTab('models',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><span data-i18n="tab.models">Models</span></div>
+    <div class="sd-tab" onclick="sdTab('extensions',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span data-i18n="tab.extensions">Extensions</span></div>
+    <div class="sd-tab" onclick="sdTab('network',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span data-i18n="tab.network">Network</span></div>
+    <div class="sd-tab" onclick="sdTab('about',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="sd-tab-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span data-i18n="tab.about">About</span></div>
+  </div>
+  <div class="sd-body">
+
+    <!-- ══ 通用 ══ -->
+    <div class="sd-panel active" id="sd-general">
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="set.appearance">外观</div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.theme">主题</div><select class="sd-select" id="sd-theme" onchange="setTheme(this.value)"><option value="dark" data-i18n="set.dark">深色</option><option value="light" data-i18n="set.light">浅色</option></select></div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.lang">语言</div><select class="sd-select" id="sd-lang" onchange="setLang(this.value)"><option value="zh">中文</option><option value="en">English</option></select></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">AI</div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.thinking">思考模式</div><select class="sd-select" id="sd-thinking" onchange="saveCliSetting('alwaysThinkingEnabled',this.value==='true')"><option value="true" data-i18n="opt.enabled">开启</option><option value="false" data-i18n="opt.disabled">关闭</option></select></div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.effort">工作量级别</div><select class="sd-select" id="sd-effort" onchange="saveCliSetting('effortLevel',this.value)"><option value="low">Low</option><option value="medium">Medium</option><option value="high" selected>High</option></select></div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.perm_mode">权限模式</div><select class="sd-select" id="sd-perm" onchange="saveCliSetting('permissions.defaultMode',this.value)"><option value="default">Default</option><option value="plan">Plan</option><option value="acceptEdits">Accept Edits</option><option value="bypassPermissions">Bypass</option></select></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="set.terminal">终端</div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.font">字号</div><select class="sd-select" id="sd-font" onchange="setTermFont(this.value)"><option value="12">12</option><option value="13">13</option><option value="14" selected>14</option><option value="15">15</option><option value="16">16</option></select></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="set.keybindings">快捷键</div>
+        <div id="sd-keybindings" class="sd-keybindings-box"></div>
+      </div>
+    </div>
+
+    <!-- ══ 接入 (Providers) ══ -->
+    <div class="sd-panel" id="sd-providers">
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="prov.title">API 提供商</div>
+          <button class="btn btn-p btn-sm" onclick="showAddProv()">+ <span data-i18n="prov.add">添加提供商</span></button>
+        </div>
+        <div id="sd-prov-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ 模型 ══ -->
+    <div class="sd-panel" id="sd-models">
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="model.title">模型管理</div>
+          <button class="btn btn-s btn-sm" onclick="refreshAllModelsDrawer()"><span data-i18n="btn.refresh">Refresh</span></button>
+        </div>
+        <input type="text" class="sd-search" id="sd-model-search" placeholder="Search models..." data-i18n-placeholder="ph.search_models" oninput="renderDrawerModels()">
+        <div id="sd-model-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ 扩展 ══ -->
+    <div class="sd-panel" id="sd-extensions">
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="market.title">Marketplace</div>
+        <div class="market-search-row">
+          <input id="sd-mcp-search" class="sd-search" placeholder="Search or enter npm package name..." data-i18n-placeholder="market.search_ph" oninput="filterMcpMarket(this.value)">
+          <button class="btn btn-p btn-sm market-install-btn" onclick="quickInstallMcpFromDrawer()" type="button" data-i18n="mcp.install_pkg">Install</button>
+        </div>
+        <div id="sd-mcp-market"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="market.installed">Installed MCP</div>
+          <button class="btn btn-s btn-sm" onclick="showAddMcp()">+ <span data-i18n="market.custom">自定义</span></button>
+        </div>
+        <div id="sd-mcp-list"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="plugins.section_title">Plugins</div>
+          <button class="btn btn-s btn-sm" onclick="showAddPlugin()">+ <span data-i18n="plugins.create">创建插件</span></button>
+        </div>
+        <div class="sd-desc" data-i18n="plugins.desc_short">Custom commands, prompt templates, and integrations</div>
+        <div id="sd-plugins-installed"></div>
+        <div class="sd-section-title" style="margin-top:12px;font-size:11px" data-i18n="plugins.marketplace">Plugin Marketplace</div>
+        <div id="sd-plugins-market"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="automation.title">Automation Engine</div>
+          <div id="sd-automation-status" class="automation-badge">Loading...</div>
+        </div>
+        <div class="sd-desc">Cron scheduler and Webhook server run in the background while the app is open.</div>
+        <div id="sd-automation-info"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="workflow.title">Workflows</div>
+          <button class="btn btn-s btn-sm" onclick="showAddWorkflow()">+ <span data-i18n="workflow.create">New</span></button>
+        </div>
+        <div class="sd-desc" data-i18n="workflow.desc">Create automated task chains: Trigger → Actions → Output</div>
+        <div id="sd-workflow-list"></div>
+        <!-- Workflow Editor Modal -->
+        <div id="workflow-editor" class="workflow-editor hidden">
+          <div class="workflow-editor-header">
+            <span data-i18n="workflow.editor_title">Workflow Editor</span>
+            <button class="btn btn-s btn-sm" onclick="closeWorkflowEditor()">✕</button>
+          </div>
+          <div class="workflow-form">
+            <div class="sd-row"><label data-i18n="workflow.name">Name</label><input id="wf-name" class="sd-input" placeholder="My Workflow"></div>
+            <div class="sd-row"><label data-i18n="workflow.trigger">Trigger</label>
+              <select id="wf-trigger" class="sd-select" title="Workflow trigger type" onchange="onWorkflowTriggerChange()">
+                <option value="manual" data-i18n="workflow.manual">Manual</option>
+                <option value="cron" data-i18n="workflow.scheduled">Scheduled</option>
+                <option value="webhook" data-i18n="workflow.webhook">Webhook (HTTP)</option>
+                <option value="file_change" data-i18n="workflow.on_file_change">On File Change</option>
+                <option value="startup" data-i18n="workflow.on_startup">On Startup</option>
+              </select>
+            </div>
+            <div id="wf-trigger-opts" class="hidden">
+              <div id="wf-cron-row" class="sd-row"><label data-i18n="workflow.cron_expr">Cron Expression</label><input id="wf-cron" class="sd-input" placeholder="0 9 * * *"></div>
+              <div id="wf-webhook-row" class="sd-row hidden"><label data-i18n="workflow.webhook_url">Webhook URL</label><input id="wf-webhook-url" class="sd-input" readonly placeholder="Save workflow to generate URL"></div>
+            </div>
+            <div class="sd-row"><label data-i18n="workflow.steps">Steps</label></div>
+            <div id="wf-steps" class="workflow-steps"></div>
+            <button class="btn btn-s btn-sm" onclick="addWorkflowStep()" style="margin:8px 0">+ <span data-i18n="workflow.add_step">Add Step</span></button>
+            <div class="workflow-canvas" id="wf-canvas"></div>
+            <div class="workflow-actions" style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-s btn-sm" onclick="saveWorkflow()" style="background:var(--accent);color:#fff" data-i18n="workflow.save">Save</button>
+              <button class="btn btn-s btn-sm" onclick="runWorkflow()" data-i18n="workflow.run_now">Run Now</button>
+              <button class="btn btn-s btn-sm" onclick="closeWorkflowEditor()" data-i18n="workflow.cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 网络 ══ -->
+    <div class="sd-panel" id="sd-network">
+      <div class="sd-section">
+        <div class="sd-section-title">Proxy</div>
+        <div class="sd-proxy-modes">
+          <button class="btn btn-s btn-sm" onclick="setDirectProxy()"><span data-i18n="proxy.direct">Direct</span></button>
+          <button class="btn btn-s btn-sm" onclick="setSystemProxy()"><span data-i18n="proxy.system_proxy">System Proxy</span></button>
+          <button class="btn btn-s btn-sm" onclick="checkCurrentIpDrawer()"><span data-i18n="proxy.check">Check IP</span></button>
+        </div>
+        <div id="sd-proxy-status" class="result-area"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="proxy.add_proxy">添加代理</div>
+        <div class="proxy-add-row">
+          <select class="sd-select" id="sd-proxy-add-type" title="Proxy type"><option value="socks5">SOCKS5</option><option value="http">HTTP</option></select>
+          <input class="sd-select proxy-add-input" id="sd-proxy-add-url" placeholder="host:port or user:pass@host:port" data-i18n-placeholder="proxy.add_ph">
+          <button class="btn btn-p btn-sm" onclick="addSavedProxy()">+ <span data-i18n="proxy.add">添加</span></button>
+        </div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="proxy.saved">已保存</div>
+        <div id="sd-proxy-list"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-header">
+          <div class="sd-section-title" data-i18n="email.section_title">Email (SMTP)</div>
+          <div class="sd-section-actions">
+            <button class="btn btn-p btn-sm" onclick="saveSmtpSettings()" data-i18n="email.save">Save</button>
+            <button class="btn btn-s btn-sm" onclick="testSmtpConnection()" data-i18n="email.test">Test Connection</button>
+          </div>
+        </div>
+        <div class="sd-desc" data-i18n="email.smtp_desc">Configure SMTP to send emails with /email or from the + menu</div>
+        <div class="smtp-grid">
+          <div class="smtp-field">
+            <label class="smtp-label">SMTP Server</label>
+            <input class="sd-input" id="smtp-host" placeholder="smtp.gmail.com">
+          </div>
+          <div class="smtp-field">
+            <label class="smtp-label">Port</label>
+            <input class="sd-input" id="smtp-port" placeholder="465" type="number">
+          </div>
+          <div class="smtp-field smtp-field-full">
+            <label class="smtp-label" data-i18n="email.user">Email Account</label>
+            <input class="sd-input" id="smtp-user" placeholder="you@gmail.com">
+          </div>
+          <div class="smtp-field smtp-field-full">
+            <label class="smtp-label" data-i18n="email.password">App Password</label>
+            <div class="smtp-pass-wrap"><input class="sd-input" id="smtp-pass" type="password" placeholder="App-specific password"><button class="btn btn-xs smtp-eye" onclick="toggleVis('smtp-pass')" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          </div>
+          <div class="smtp-field smtp-field-full">
+            <label class="smtp-label" data-i18n="email.from">Sender Name</label>
+            <input class="sd-input" id="smtp-from" placeholder="Your Name <you@gmail.com>">
+          </div>
+        </div>
+        <div id="smtp-status" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ══ 关于 ══ -->
+    <div class="sd-panel" id="sd-about">
+      <div class="sd-about-hero">
+        <img src="assets/logo.png" alt="LaiaiAgent" class="sd-about-logo" onerror="this.style.display='none'">
+        <h3 class="sd-about-name">LaiaiAgent</h3>
+        <p id="sd-about-ver" class="sd-about-ver">v0.0.1</p>
+        <p class="sd-about-desc" data-i18n="about.desc">智能 AI 助手 · 全模型聚合</p>
+        <div class="sd-about-links">
+          <button class="btn btn-s btn-sm" onclick="electronAPI.openFile('https://www.laiai.ai')"><span data-i18n="about.web">Website</span></button>
+          <button class="btn btn-s btn-sm" onclick="electronAPI.openFile('https://docs.laiai.ai/')"><span data-i18n="about.support">Docs</span></button>
+          <button class="btn btn-s btn-sm" onclick="checkForUpdateManual()" id="btn-check-update" data-i18n="update.check">Check for Updates</button>
+        </div>
+        <span id="update-status" class="update-status"></span>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="memory.project_memory">项目记忆</div>
+        <div class="sd-row-desc" style="margin-bottom:8px" data-i18n="memory.desc">为 AI 提供项目上下文，创建 LAIAI.md 文件持久化项目信息。</div>
+        <textarea id="sd-memory-editor" class="sd-textarea" placeholder="# Project Description&#10;Describe your project..." data-i18n-placeholder="ph.memory_template"></textarea>
+        <div class="sd-btn-group">
+          <button class="btn btn-p btn-sm" onclick="saveLaiaiMd()"><span data-i18n="btn.save">Save</span></button>
+          <button class="btn btn-s btn-sm" onclick="genLaiaiMd()"><span data-i18n="memory.ai_gen">AI Generate</span></button>
+        </div>
+        <div id="sd-memory-gen-result" class="result-area"></div>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title" data-i18n="set.privacy">数据</div>
+        <div class="sd-row"><div class="sd-row-label" data-i18n="set.retention">会话保留</div><select class="sd-select" onchange="saveCliSetting('cleanupPeriodDays',parseInt(this.value))"><option value="7" data-i18n="opt.days_7">7 天</option><option value="14" data-i18n="opt.days_14">14 天</option><option value="30" selected data-i18n="opt.days_30">30 天</option><option value="90" data-i18n="opt.days_90">90 天</option><option value="0" data-i18n="opt.no_retain">不保留</option></select></div>
+      </div>
+      <div class="sd-about-footer" data-i18n="about.copyright">© 2026 莱艾科技 LAIAI Tech</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span></span></div>
+
+<!-- ═══ SCRIPTS ═══ -->
+
+<script src="vendor/xterm.js"></script>
+<script src="vendor/addon-fit.js"></script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
