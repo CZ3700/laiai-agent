@@ -23,6 +23,8 @@ extraResources:
     to: dist/cli-final.cjs
   - from: dist/node-runtime.exe
     to: dist/node-runtime.exe
+  - from: dist/node_modules
+    to: dist/node_modules
   - from: config/models.json
     to: config/models.json
   - from: electron/assets

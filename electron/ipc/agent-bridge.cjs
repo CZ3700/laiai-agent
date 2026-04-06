@@ -64,7 +64,10 @@ function register(ctx) {
       CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
     });
 
-    // cli-final.cjs is fully self-contained — no external deps needed
+    // Point to bundled node_modules for the 4 dynamic-require packages
+    if (app.isPackaged) {
+      env.NODE_PATH = path.join(process.resourcesPath, 'dist', 'node_modules');
+    }
 
     // Set API credentials from provider
     if (opts.provider) {
